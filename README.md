@@ -1,7 +1,7 @@
 # Blankstorm
 
 https://blankstorm.drvortex.dev  
-Annihilation is a free to play online space game - no installation required. Command your own fleet of capitol ships and explore the galaxy!  
+Blankstorm is a free to play online space game - no installation required. Command your own fleet of capitol ships and explore the galaxy!  
 
 [Changelog](https://b.drvortex.dev/versions)
 
