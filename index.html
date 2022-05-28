@@ -1,0 +1,3253 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script async>
+		let db = {}, openDBReq = indexedDB.open('blankstorm', 2);
+		openDBReq.onsuccess = e => {
+			db = e.target.result;
+		};
+		openDBReq.onerror = e => {
+			console.error('Failed to open IndexedDB: ' + e.target.error);
+		}
+		openDBReq.onupgradeneeded = e => {
+			let db = e.target.result;
+			switch(e.oldVersion){
+				case 0:
+				db.createObjectStore('saves');
+				db.createObjectStore('settings');
+				db.createObjectStore('servers');
+				db.createObjectStore('mods');
+				case 1:
+				db.createObjectStore('locales');
+			}
+			
+		}
+	</script>
+	<link rel=icon href=image/icon.png type=image/png>
+	<style>
+		:root{
+			--hue: 200;
+			--_bg-color: var(--hue), 50%, 25%;
+			--text-color: hsl(var(--hue), 100%, 90%, .8);
+			--text-shadow: 0 0 7px hsl(var(--hue), 100%, 50%);
+			--font-family: sans-serif;
+			--font-size: 15px;
+			--bg-color: hsl(var(--_bg-color));
+			--button-color: hsl(var(--hue), 100%, 70%, .5);
+			--bg-gradient-dark: hsl(var(--hue), 50%, 0%);
+			--bg-gradient-light: hsl(var(--hue), 70%, 70%, .5);
+			--bg-color-alt: #252525;
+			--bg-shadow: 0 0 6px hsl(var(--hue), 100%, 80%);
+			--hover-shadow: 0 0 8px hsl(var(--hue), 100%, 90%);
+			--bg-radius: 4px;
+			scrollbar-color: var(--text-color);
+			scrollbar-width: thin;
+			accent-color: var(--text-color);
+			color-scheme: light dark;
+		}
+		#loading_cover svg path{
+			transform-origin: center;
+			animation: 1s linear infinite rotate;
+		}
+		@keyframes rotate{
+			from{
+				transform: rotate(0);
+			}
+			to{
+				transform: rotate(360deg);
+			}
+		}
+		body{
+			font-family: var(--font-family);
+			background-color: var(--bg-color-alt);
+			color: var(--text-color);
+			font-size: var(--font-size);
+		}
+		p, a, span, h1, h2, h3, h4, h5, h6, li{
+			color: var(--text-color);
+			font-family: var(--font-family);
+			font-size: var(--font-size);
+		}
+		h1, h2, h3, h4, h5, h6, [text-shadow]{
+			text-shadow: var(--text-shadow);
+		}
+		[bg=alt]{
+			background-color: var(--bg-color-alt);
+		}
+		code{
+			font-family: monospace;
+			background-color: #222;
+			border: 1px solid #080808;
+			border-radius: 25%;
+			font-size: var(--font-size);
+		}
+		table, tr, td{
+			border: 1px solid white;
+			text-shadow: #EEE 0px 0px 7px;
+			border-collapse: collapse;
+		}
+		table{
+			background: var(--bg-color-alt);
+			box-shadow: var(--bg-shadow);
+			font-size: var(--font-size);
+			display: inline-block;
+			border-radius: var(--bg-radius);
+			position: relative;
+			width: fit-content;
+			color: var(--text-color);
+			border-collapse: collapse;
+			margin: 24px;
+		}
+		[tabindex]:focus, [nooutline]{
+			outline: none;
+		}
+		td{
+			padding: 3px;
+			text-shadow: none
+		}
+		button{
+			box-shadow: var(--bg-shadow);
+			border-radius: var(--bg-radius);
+			color: var(--text-color);
+			font-family: var(--font-family);
+			font-size: var(--font-size);
+			cursor: pointer;
+			background: radial-gradient(ellipse at center, var(--bg-gradient-dark) 0, var(--button-color) 150%);
+			border: 0;
+			padding: 5px 15px;
+		}
+		button:hover{
+			background: radial-gradient(ellipse at center, var(--bg-gradient-dark) 0, var(--button-color) 100%);
+			box-shadow: var(--hover-shadow);
+		}
+		input, textarea{
+			display: inline-block;
+			background: linear-gradient(to top, var(--bg-gradient-light) 0, var(--bg-gradient-dark) 20%, var(--bg-gradient-dark) 60%, var(--bg-gradient-light) 100%);
+			box-shadow: var(--bg-shadow);
+			border-radius: var(--bg-radius);
+			margin-top: 10px;
+			position: relative;
+			color: var(--text-color);
+		}
+		input:hover{
+			cursor: text
+		}
+		input[type=checkbox]:hover{
+			cursor: pointer
+		}
+		:where(div, dialog, ol, ul, nav, form, li[bg]):not([bg=none],[bg=alt]){
+			background-color: var(--bg-color);
+			border-radius: var(--bg-radius);
+			box-shadow: var(--bg-shadow);
+			color: var(--text-color);
+		}
+		body>:where(div, ol, ul, nav, form):not([bg=none],[bg=alt]), [bg=trans]{
+			--bg-color-seethru: hsl(var(--_bg-color), 0.33);
+			background: 
+			linear-gradient(to right, var(--bg-color) 0%, var(--bg-color-seethru) 10%, var(--bg-color-seethru) 50%, var(--bg-color-seethru) 90%, var(--bg-color) 100%),
+			linear-gradient(to bottom, var(--bg-color) 0%, var(--bg-color-seethru) 20%, var(--bg-color-seethru) 50%, var(--bg-color-seethru) 80%, var(--bg-color) 100%);
+		}
+		dialog{
+			border: none;
+		}
+		input[type=range]{
+			-webkit-appearance: none;
+			overflow: hidden;
+			height: 10px;
+			background: var(--bg-color);
+		}
+		::-webkit-slider-runnable-track{
+			-webkit-appearance: none;
+			appearance: none;
+			width: 100%;
+			height: 25px;
+			border-radius: var(--bg-radius);
+			background: var(--bg-color);
+			outline: none;
+		}
+		::-webkit-slider-thumb{
+			-webkit-appearance: none;
+			appearance: none;
+			width: 25px;
+			height: 25px;
+			border-radius: 25%;
+			cursor: pointer;
+			background: var(--text-color);
+		}
+		::-webkit-scrollbar{
+			background-color: #0000;
+			width: 5px;
+		}
+		::-webkit-scrollbar-track{
+			background-color: #0000;
+		}
+		::-webkit-scrollbar-thumb{
+			background-color: var(--text-color);
+			border-radius: 2.5px;
+		}
+		:where(#settings form, #save) :where(input, select), form.key button{
+			position: absolute;
+			left: 51%
+		}
+		form label{
+			position: absolute;
+			right: 51%;
+			width: 50%;
+			text-align: right
+		}
+		#chat li{
+			background: none;
+			list-style: none
+		}
+		:where(#e, #q) div:not(.nav){
+			position: absolute;
+			top: 15%;
+			left: 2.5%;
+			width: 90%;
+			height: 80%
+		}
+		ul.screenshots img{
+			border: 1px solid var(--text-color);
+			border-radius: 5px;
+			margin: 10px
+		}
+		#debug p{
+			position: fixed
+		}
+		#debug span{
+			background-color: #2225
+		}
+		#settings ul, #settings form{
+			position: absolute;
+			left: 25%;
+			width: 70%;
+			top: 5%;
+			height: 90%
+		}
+		[bg=light]{
+			background-color: hsl(var(--hue), 50%, 90%, 0.75);
+		}
+		.selected{
+			border: 1px solid var(--text-color);
+		}
+		li[bg]{
+			list-style: none;
+			margin: 1% 10% 1% 5%;
+		}
+		[bg=none]{
+			background: none;
+			box-shadow: none;
+		}
+		[border]{
+			border: 1px solid var(--text-color);
+			border-radius: var(--bg-radius);
+		}
+		[center-flex]{
+			display: flex;
+			justify-content: center;
+		}
+		[hide]{
+			display: none
+		}
+		[lsn]{
+			list-style: none !important
+		}
+		[nbs]{
+			box-shadow: none !important
+		}
+		[nts]{
+			text-shadow: none !important
+		}
+		[ofs=]{
+			overflow: scroll !important
+		}
+		[ofs=x]{
+			overflow-x: scroll !important
+		}
+		[ofs=y]{
+			overflow-y: scroll !important
+		}
+		[ofn]{
+			overflow: hidden !important
+		}
+		[ofn=x]{
+			overflow-x: hidden !important
+		}
+		[ofn=y]{
+			overflow-y: hidden !important
+		}
+		[bw]{
+			word-wrap: break-word !important
+		}
+		[cover]{
+			position: fixed;
+			inset: 0 0 0 0;
+		}
+		[content]{
+			position: fixed;
+			inset: 10% 10% 10% 10%;
+		}
+		ul[content]{
+			height: 70%;
+			padding: 5%
+		}
+		[clickable]:hover{
+			cursor: pointer
+		}
+		svg{
+			width: 1em;
+			height: 1em;
+			fill: var(--text-color);
+			transform-origin: center;
+		}
+		[bg=star]{
+			background-image: url('image/menu.png');
+		}
+	</style>
+</head>
+<body oncontextmenu='e=>false' bg=star>
+	<div id=loading_cover cover bg=alt style=z-index:100;display:flex;justify-content:center;>
+		<svg xmlns="http://www.w3.org/2000/svg" style='position:absolute;top:calc(50% - 100px);width:150px;height:150px' viewBox='0 0 100 100'>
+			<defs>
+				<linearGradient id=gradient>
+					<stop offset=0% stop-color=hsl(200,100%,90%,.2) />
+					<stop offset=100% stop-color=hsl(200,100%,90%,1) />
+				</linearGradient>
+			</defs>
+			<path fill=var(--text-color) d="m60,50c0,5.5 -4.5,10 -10,10c-5.5,0 -10,-4.5 -10,-10c0,-5.5 4.5,-10 10,-10c5.5,0 10,4.5 10,10z" />
+			<path fill=url(#gradient) d="m73,50c0,-12.7 -10.3,-23 -23,-23s-23,10.3 -23,23m0.47001,0c0,-10.5 11.50746,-20.6493 22.10746,-20.6493s19.52254,10.1493 19.52254,20.6493" />
+		</svg>
+		<p style=position:absolute;font-size:25px;top:50%;font-family:sans-serif; text-shadow>Loading</p>
+	</div>
+	<input ingame id=cli style=position:fixed;left:15px;bottom:15px;width:30%;height:30px;padding:0;margin:0;z-index:10 hide ofs=x>
+	<ul lsn id=chat style=position:fixed;left:15px;bottom:50px;width:30%;height:fit-content;max-height:35%;background:#2225;padding:0;margin:0;z-index:9 nbs ofn bw></ul>
+	<ul lsn ingame id=chat_history hide style=position:fixed;left:15px;bottom:50px;width:30%;height:fit-content;max-height:35%;background:#2225;padding:0;margin:0;z-index:9 nbs ofs=y bw></ul>
+	<div id=main cover bg=none center-flex>
+		<img src=image/title.png plot=c,90px,475px,75px />
+		<button class=sp plot=c,260px,350px,50px></button>
+		<button class=mp plot=c,360px,350px,50px></button>
+		<button class=options plot=c,460px,350px,50px></button>
+		<a class=exit href= /><button class=exit plot=c,560px,350px,50px></button></a>
+		<p class=version plot=r2em,b1em,fit-content,1em style=text-align:right></p>
+		<p class=copyright plot=2em,b1em,fit-content,1em>© 2022 Dr. Vortex. All Rights Reserved.</p>
+	</div>
+	<ul id=load hide lsn content ofs=y style=padding:2.5%>
+		<button class=back plot=25px,b25px,125px,36px,a>
+			<svg><use href=image/icons.svg#arrow-left /></svg> 
+			<span></span>
+		</button>
+		<button class=new plot=r25px,b25px,125px,36px,a>
+			<svg><use href=image/icons.svg#plus /></svg> 
+			<span></span>
+		</button>
+		<button class='refresh upload' plot=r175px,b25px,125px,36px,a>
+			<svg><use href=image/icons.svg#upload /></svg> 
+			<span></span>
+		</button>
+	</ul>
+	<dialog id=save ofs=y plot=0,0,400px,300px>
+		<input placeholder="save name" class=name plot=c,50px,250px,2em,a>
+		<button class=back plot=c-75px,b62.5px,150px,36.6px,a>
+			<svg><use href=image/icons.svg#arrow-left /></svg> 
+			<span></span>
+		</button>
+		<button class=new plot=c+75px,b62.5px,150px,36.6px,a>
+			<svg><use href=image/icons.svg#plus /></svg> 
+			<span></span>
+		</button>
+		<form name=worldgen bg=none plot='c,calc(2em + 75px),80%,100px,a'>
+			<input type=range name=difficulty label=Difficulty display='${{"0.5":"Easy","1":"Normal","1.5":"Hard","2":"<dfn style=\"font-style: normal;border-bottom:1px dotted var(--text-color)\" title=\"Disclaimer: Not yet limited to one life.\">Hardcore</dfn>"}[val]}' min=0.5 max=2 step=0.5 value=1><br><br>
+		</form>
+	</dialog>
+	<div id=connect hide content>
+		<p plot=c,c-2em,75%,1em style=text-align:center></p>
+		<button plot=c,c+2em,100px,2em class=back>
+			<span></span>
+		</button>
+	</div>
+	<p ingame hide id=mp_message plot=c,c-2em,300px,1em>
+		Multiplayer is not fully implemented yet.<br>
+		Feel free to test chat or commands (T).<br>
+		Use the pause menu (Esc) to disconnect.<br>
+		Thanks!<br><br>
+		&emsp;&emsp;- Dr. Vortex
+	</p>
+	<div ingame id=tablist hide plot=c,0,200px,fit-content style=word-wrap:break-word;text-align:center;>
+		<p class=info></p>
+		<p class=players></p>
+	</div>
+	<dialog id=modal plot=0,0,350px,8em>
+		<p class=info plot=c,c-2em,300px,1em,a style=text-align:center></p>
+		<form method=dialog></form>
+	</dialog>
+	<div ingame id=e content hide game-ui style=z-index:5 tabindex=-1>
+		<div class=nav bg=none plot=5%,25px,90%,45px,a>
+			<button class=trade plot=c-225px,5px,200px,35px,a>
+				<svg><use href=image/icons.svg#money-check-dollar /></svg> 
+				<span></span>
+			</button>
+			<button class=yrd plot=c,5px,200px,35px,a>
+				<svg><use href=image/icons.svg#wrench /></svg> 
+				<span></span>
+			</button>
+			<button class=lab plot=c+225px,5px,200px,35px,a>
+				<svg><use href=image/icons.svg#flask /></svg> 
+				<span></span>
+			</button>
+		</div>
+		<div class=trade ofs=y bg=none style='margin-top:10px;display:grid;grid-auto-rows:3em;grid-template-columns:1fr 1fr 4fr;column-gap: 10px'></div>
+		<div class=yrd ofs=y bg=none style='margin-top:10px;display:grid;grid-auto-rows:3em;grid-template-columns:1fr 2fr 1fr;column-gap: 10px'></div>
+		<div class=lab ofs=y bg=none style='margin-top:10px;display:grid;grid-auto-rows:3em;grid-template-columns:1fr 2fr 1fr;column-gap: 10px'></div>
+	</div>
+	<div ingame id=q content hide game-ui style=z-index:5 tabindex=-1>
+		<div class=nav bg=none plot=5%,25px,90%,45px,a>
+			<button class=inv plot=c-300px,5px,175px,35px,a>
+				<svg><use href=image/icons.svg#box /></svg> 
+				<span></span>
+			</button>
+			<button class=map plot=c-100px,5px,175px,35px,a>
+				<svg><use href=image/icons.svg#location-dot /></svg> 
+				<span></span>
+			</button>
+			<button class=screenshots plot=c+100px,5px,175px,35px,a>
+				<svg><use href=image/icons.svg#image /></svg> 
+				<span></span>
+			</button>
+			<button class=warp plot=c+300px,5px,175px,35px,a>
+				<svg><use href=image/icons.svg#rocket-launch /></svg> 
+				<span></span>
+			</button>
+		</div>
+		<div class=inv ofs=y bg=none style='margin-top:10px;display:grid;grid-auto-rows:3em;grid-template-columns:1fr 1fr;column-gap: 10px'></div>
+		<div class=item-bar plot='c,calc(3em + 45px),75%,1.5em,a' style=text-align:center;line-height:0;>
+			<p class=label plot=c,0,200px,1em,a></p>
+			<svg class=item-bar style=width:100%;height:100% preserveAspectRatio=none viewBox='0 0 100 1'>
+				<rect fill=var(--button-color) x=0 y=0 width=0 height=100%></rect>
+			</svg>
+		</div>
+		<div class=map ofs=y bg=none style='margin-top:10px;display:grid;grid-auto-rows:3em;grid-template-columns:repeat(4, 1fr) 6fr;column-gap: 10px'></div>
+		<button class='map new' plot=r25px,b25px,125px,36px,a>
+			<svg><use href=image/icons.svg#plus /></svg> 
+			<span></span>
+		</button>
+		<div class=screenshots bg=none ofs=y style='display:grid;grid-auto-rows:144px;grid-template-columns:repeat(auto-fill,256px);gap:1em;'></div>
+		<div class=warp ofs=y bg=none>
+			<center>
+				<input label="Warp To: " class="warp x" maxlength=4 style=width:50px>
+				<input class="warp y" maxlength=4 style=width:50px>
+				<button style=margin:1% class=warp></button>
+			</center>
+		</div>
+	</div>
+	<div id=markers style=z-index:2></div>
+	<canvas ingame class=game hide cover style=z-index:0></canvas>
+	<div ingame id=debug bg=none hide cover style=width:fit-content>
+		<p style=left:1%;top:0 class=left></p>
+		<p style=right:1%;top:0;text-align:right class=right></p>
+	</div>
+	<div ingame id=hud hide bg=none>
+		<p class=level plot=c,b1em,150px,1em style=text-align:center;line-height:3em></p>
+		<p class=rcs plot=1em,100px,150px,50px bg=trans style=text-align:center;line-height:50px;font-size:20px;border-radius:var(--bg-radius)>RCS: ON</p>
+		<div class=xp plot=c,b1em,300px,1em bg=none>
+			<svg class=xp style=width:100%;height:100% preserveAspectRatio=none viewBox='0 0 100 1' border>
+				<rect fill=var(--button-color) x=0 y=0 width=0 height=100%></rect>
+			</svg>
+		</div>
+	</div>
+	<div ingame id=hud_ship hide bg=none>
+		<svg class=lock style=position:fixed;right:2%;top:2.5%;><use href=image/icons.svg#lock /></svg>
+		<svg class=upgrade style=position:fixed;right:2%;top:55%;font-size:20px;><use href=image/icons.svg#circle-up /></svg>
+	</div>
+	<div ingame  id=esc hide cover bg=none tabindex=-1>
+		<div class=content plot=c,c,250px,300px style=z-index:10>
+			<button plot=12.5px,62.5px,225px,50px,a class=resume></button>
+			<button plot=12.5px,125px,225px,50px,a class=save></button>
+			<button plot=12.5px,187.5px,225px,50px,a class=options></button>
+			<button plot=12.5px,250px,225px,50px,a class=quit></button>
+		</div>
+	</div>
+	<div id=settings hide content>
+		<button plot=50px,50px,135px,35px,a class=gen>
+			<svg><use href=image/icons.svg#gear /></svg> 
+			<span></span>
+		</button>
+		<button plot=50px,100px,135px,35px,a class=key>
+			<svg><use href=image/icons.svg#keyboard /></svg> 
+			<span></span>
+		</button>
+		<button plot=50px,150px,135px,35px,a class=mod hide>
+			<svg><use href=image/icons.svg#puzzle-piece /></svg> 
+			Mods
+		</button>
+		<button plot='50px,calc(100% - 85px),135px,35px,a' class=back>
+			<svg><use href=image/icons.svg#arrow-left /></svg> 
+			<span></span>
+		</button>
+		<form class=gen name=settings nbs bg=none ofs=y>
+			<h2 style=text-align:center>Settings - <span></span></h2>
+			<input type=range name=font_size label="Font Size" display=${val}px min=10 max=20 step=1 value=13><br><br>
+			<input type=range name=chat label="Chat Timeout" display='${val} seconds' min=5 max=15 step=1 value=10><br><br>
+			<input type=range name=sensitivity label="Camera Sensitivity" display=${(val*100).toFixed()}% min=0.1 max=2 step=0.05 value=1><br><br>
+			<input type=range name=music label="Music Volume" display=${(val*100).toFixed()}% min=0 max=1 step=0.05 value=1><br><br>
+			<input type=range name=sfx label="Sound Effect Volume" display="${(val*100).toFixed()}%" min=0 max=1 step=0.05 value=1><br><br>
+			<input type=range name=render_quality label='Render Quality' display="${['Low','Medium','High'][val]}" min=0 max=2 step=1 value=1><br><br>
+			<input type=hidden name=debug_tooltips value=false>
+			<input type=checkbox name=debug_tooltips label="Show Advanced Tooltips" value=true><br><br>
+			<input type=range name=gui_scale label="GUI Scale" display="${['auto','small','normal','large'][val]}" min=0 max=3 step=1 value=0><br><br>
+			<input type=range name=mesh_quality label='Mesh Quality' display='${{"32":"Low","64":"Low","96":"Low","128":"Normal","160":"Normal","196":"High","224":"High","256":"<dfn style=\"font-style: normal;border-bottom:1px dotted var(--text-color)\" title=\"Intended for high-end computers\">Ultra</dfn>"}[val]}' min=32 max=256 step=32 value=64><br><br>
+			<select name=locale label=Language></select>
+		</form>
+		<form class=key name=keybind nbs bg=none ofs=y hide>
+			<h2 style=text-align:center>Settings - <span></span></h2>
+		</form>
+		<ul class=dp nbs bg=none ofs=y hide lsn></ul>
+		<ul class=mod nbs bg=none ofs=y hide lsn></ul>
+	</div>
+</body>
+<script class=jquery src=libraries/jquery.js></script>
+<script class=babylon src=libraries/babylon/5.4.0/core.js></script>
+<script class=loaders src=libraries/babylon/5.4.0/loaders.js></script>
+<script class=socketio src=libraries/socket.io/4.5.0.js></script>
+<script class=game async defer>
+	const web = url => `https://blankstorm.drvortex.dev/` + url,
+	upload = (type, multiple = false) => new Promise(res => $(`<input type=file ${type ? `accept='${type}'` : ''} ${multiple?'multiple':''}>`).change(e => res([...e.target.files]))[0].click()),
+	download = (data, name) => $(`<a href=${URL.createObjectURL(new Blob([data]))} download="${name ?? 'download'}"></a>`)[0].click(),
+	isJSON = str => {
+		try {
+			JSON.parse(str);
+			return true
+		} catch (e) {
+			return false
+		}
+	},
+	isHex = str => /^[0-9a-f]+$/.test(str);
+
+	const modal = (input = 'Are you sure?', options = {Cancel: false, Ok: true}) => new Promise(res => {
+		if(input instanceof Array){
+			$('#modal').attr('plot', `0,0,350px,${6 + 2*input.length}em`);
+			$('#modal p.info').attr('plot',`c,c-${2*input.length}em,300px,1em,a`).html(input.reduce((a, {name, text, value}) => a + `<input name=${name} placeholder='${text??''}' value='${value??''}'><br>`, ''));
+		}else{
+			$('#modal').attr('plot', '0,0,350px,8em');
+			$('#modal p.info').attr('plot', 'c,c-2em,300px,1em,a').text(input);
+		}
+		
+		$('#modal')[0].showModal();
+		Object.entries(options).forEach(([displayText, result], i, a) => {
+			$(`<button></button>`)
+				.attr('plot', a.length == 2 ? `c${i ? `+` : `-`}50px,b2em,100px,2em,a` : `c,b2em,100px,2em,a`)
+				.attr('value', result)
+				.text(displayText)
+				.appendTo('#modal form');
+		});
+		$('#modal').on('close', e => {
+			res(input instanceof Array ? {...Object.fromEntries([...$('#modal input')].map(el => [el.name, el.value])), result: $('#modal')[0].returnValue} : $('#modal')[0].returnValue);
+			$('#modal button').remove();
+		});
+		ui.update();
+	}),
+	_alert = window.alert,
+	_confirm = window.confirm,
+	_prompt = window.prompt,
+	alert = data => modal(data, {Ok: true}),
+	confirm = async data => {
+		let res = await modal(data);
+		if(JSON.parse(res)){
+			return true;
+		}else{
+			throw false;
+		}
+	},
+	prompt = async (text, value) => {
+		let data = await modal([{name: 'data', text, value}]);
+		if(JSON.parse(data.result)){
+			return data.data;
+		}else{
+			throw false;
+		}
+	};
+
+	Object.defineProperties(Object.prototype, {
+		hide: {
+			value: function (...p) {
+				for (let i of p) {
+					Object.defineProperty(this, i, { enumerable: false })
+				}
+			}
+		},
+		freezeProperty: {
+			value: function (...p) {
+				for (let i of p) {
+					Object.defineProperty(this, i, { writable: false })
+				}
+			}
+		},
+		getByString: {
+			value: function (path, seperator) {
+				return path
+				.split(seperator || /[\.\[\]\'\"]/)
+				.filter(p => p)
+				.reduce((o, p) => o ? o[p] : null, this)
+			}
+		},
+		setByString: {
+			value: function(path, value, seperator){
+				return path
+				.split(seperator || /[\.\[\]\'\"]/)
+				.filter(p => p)
+				.reduce((o, p, i) => o[p] = path.split(seperator || /[\.\[\]\'\"]/).filter(p => p).length === ++i ? value : (o[p] || {}), this);
+			}
+		},
+		copyFrom: {
+			value: function(source, props){
+				Object.assign(this, props ? Object.fromEntries(Object.entries(source).filter(([k ,v]) => props.includes(k))) : source);
+				return this;
+			}
+		}
+	});
+
+	Math._log = Math.log;
+	Math.log = (num, base = Math.E) => Math._log(num)/Math._log(base);
+	
+	Object.assign(window, BABYLON);
+
+	Object.assign(Vector3.prototype, {
+		abs: function(){return new Vector3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z))},
+		toFixed: function(num = 1){return new Vector3(this.x.toFixed(num), this.y.toFixed(num), this.z.toFixed(num))},
+		toPolar: function(){return Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2)},
+		display: function(mode = 'xyz', ...options){
+			return mode == 'xyz' ? `(${this.x}, ${this.y}, ${this.z})` :
+			mode == 'xy' ? `(${this.x}, ${this.y})` :
+			mode == 'xz' ? `(${this.x}, ${this.z})` :
+			mode == 'yz' ? `(${this.y}, ${this.z})` :
+			new SyntaxError('Vector3().display: Invalid mode: ' + mode);
+		},
+		worldToScreen: function(scene = game.scene()){
+			return Vector3.Project(this, Matrix.Identity(), scene.getTransformMatrix(), new Viewport(0, 0, width, height));
+		}
+	});
+	Vector2.prototype.display = function(){
+		return `(${this.x}, ${this.y})`;
+	};
+
+	//JQuery plugins
+	$.ajaxSetup({timeout:3000});
+	$.fn.formData = function(data){
+		if (data) {
+			for (let i in data) {
+				this.find(`[name=${i}]`).each((a, e) => { e.type == "checkbox" ? e.checked = data[i] : e.value = data[i] })
+			}
+			return this
+		} else {
+			let formData = Object.fromEntries(new FormData(this[0]));
+			for(let i in formData){
+				if(+formData[i] == formData[i]){
+					formData[i] = +formData[i];
+				}
+				if(formData[i] === 'true'){
+					formData[i] = true;
+				}
+				if(formData[i] === 'false'){
+					formData[i] = false;
+				}
+			}
+			return formData;
+		}
+	};
+	$.fn.tooltip = function (info = "") {
+		this.off('mouseenter mouseleave');
+		let id = rand.hex(32), tooltip = $(`<div class=tooltip></div>`)
+			.css({ position: "fixed", width: "fit-content", height: "fit-content", "max-width": "15%", "z-index": 9})
+			.attr('tooltip-for', id);
+		this
+			.attr('tooltip-id', id)
+			.mouseenter(e => {
+				$(`[tooltip-for=${id}]`).remove();
+				tooltip
+				.html(typeof info == 'function' ? info(tooltip) : info)
+				.css({ left: `calc(var(--font-size) + ${mouse.x}px)`, top: `calc(var(--font-size) + ${mouse.y}px)` });
+				this.attr('tooltip-active', true).parent().append(tooltip);
+				let computedStyle = getComputedStyle(tooltip[0]);
+				tooltip.css({
+					left: (settings.font_size + mouse.x + parseFloat(computedStyle.width) < width) ? settings.font_size + mouse.x : settings.font_size + mouse.x - parseFloat(computedStyle.width),
+					top: (settings.font_size + mouse.y + parseFloat(computedStyle.height) < height) ? settings.font_size + mouse.y : settings.font_size + mouse.y - parseFloat(computedStyle.height)
+				})
+			})
+			.mouseleave(e => { tooltip.remove(); this.removeAttr('tooltip-active') });
+		return this
+	};
+	$.fn.cm = function(...content){
+		content ||= [$("<p></p>")];
+		let menu = $("<div bg=light class=cm></div>");
+		for (let c of content) { menu.append(c, $('<br>')) }
+		menu.css({ position: 'fixed', width: 'fit-content', height: 'fit-content', 'max-width': '15%', padding: '1em', 'z-index': 9});
+		this.contextmenu(e => {
+			e.preventDefault();
+			menu.css({ left: settings.font_size + mouse.x, top: settings.font_size + mouse.y });
+			this.parent().append(menu);
+			menu.css({ top: (settings.font_size + mouse.y + parseFloat(getComputedStyle(menu[0]).height) < height) ? settings.font_size + mouse.y : settings.font_size + mouse.y - parseFloat(getComputedStyle(menu[0]).height) })
+		});
+		return this
+	}
+	$.fn.aspect = function(){
+		let css = getComputedStyle(this[0]);
+		return `(x: ${css.left}, y: ${css.top})\n${css.width} x ${css.height} = ${parseFloat(css.width) / parseFloat(css.height)}`
+	}
+
+	let time = 0;
+	const cookie = {},
+	query = new URLSearchParams(location.search),
+	key = { pressed: false },
+	width = innerWidth,
+	height = innerHeight,
+	mouse = { x: 0, y: 0, pressed: false },
+	trigger = event => { dispatchEvent(event) },
+	playsound = (url, vol = 1) => { let a = new Audio(url); a.volume = +vol; a.play() },
+	date = new Date();
+	onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY };
+	document.cookie.split("; ").forEach(e => { cookie[e.split("=")[0]] = e.split("=")[1] });
+	setInterval(() => { time += 10 }, 10);
+
+	Math.PHI = 1.618033988749894;
+	Math.G = 6.67 * (10 ** -11);
+	Math.clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+	const rand = {
+			get real() { return Math.random() },
+			float: (min = 0, max = 1) => Math.random() * (max - min) + min,
+			hex: (length = 1) => { let s = ""; for (let i = 0; i < length; i++) { s += Math.floor(Math.random() * 16).toString(16) } return s; },
+			get bool() { return Math.round(Math.random()) ? true : false },
+			bin: (length = 1) => { let b = ""; for (let i = 0; i < length; i++) { b += Math.round(Math.random()) } return b; },
+			int: (min = 0, max = 1) => Math.round(Math.random() * (max - min) + min),
+			char: (len = 1, min = 33, max = 126) => { let s = ''; for (let i = 0; i < len; i++) { s += String.fromCharCode(rand.int(min, max)) }; return s },
+			cords: (dis = 1, y0) => {
+				let angle = Math.random() * Math.PI * 2, angle2 = Math.random() * Math.PI * 2;
+				return y0 ? new Vector3(dis * Math.cos(angle), 0, dis * Math.sin(angle)) : new Vector3(dis * Math.cos(angle), dis * Math.sin(angle) * Math.cos(angle2), dis * Math.sin(angle) * Math.sin(angle2))
+			},
+		},
+		greek = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon", "Phi", "Chi", "Psi", "Omega"],
+		numeral = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI", "XXII", "XXIII", "XXIV", "XXV", "XXVII", "XXVII", "XXVIII", "XXIX", "XXX", "XXXI", "XXXII", "XXXIII", "XXXIV", "XXXV", "XXXVI", "XXXVII", "XXXVIII", "XXXIX", "XL", "XLI", "XLII", "XLIII", "XLIV", "XLV", "XLVI", "XLVII", "XLVIII", "XLIX", "L", "LI", "LII", "LIII", "LIV", "LV", "LVI", "LVII", "LVIII", "LIX", "LX", "LXI", "LXII", "LXIII", "LXIV", "LXV", "LXVI", "LXVII", "LXVIII", "nice", "LXX", "LXXI", "LXXII", "LXXIII", "LXXIV", "LXXV", "LXXVI", "LXXVII", "LXXVIII", "LXXIX", "LXXX", "LXXXI", "LXXXII", "LXXXIII", "LXXXIV", "LXXXV", "LXXXVI", "LXXXVII", "LXXXVIII", "LXXXIX", "XC", "XCI", "XCII", "XCIII", "XCIV", "XCV", "XCVI", "XCVII", "XCVIII", "XCIX", "C"],
+		minimize = number => {
+			let n = number, l = ["", "K", "M", "B", "T", "q", "Q", "s", "S", "O", "N", "D"];
+			if (typeof n != "number") { n = (+n) }
+			if (n < 0 || n > (+`1e${(l.length - 1) * 3}`)) return n
+			for (let i = 0; i < l.length; i++) {
+				let d = (+`1e${i * 3}`);
+				if (n / d < 1000) { return ((n / d).toFixed() + l[i]) }
+			}
+		},
+		range = (min, max) => { let a = []; for (let i = min; i < max; i++) { a.push(i) } return a };
+	
+
+	Mesh.sizeOf = mesh => {
+		if (typeof mesh.getHierarchyBoundingVectors != 'function') throw new TypeError('parameter is not a Mesh');
+		const sizes = mesh.getHierarchyBoundingVectors();
+		return sizes.max.subtract(sizes.min);
+	};
+	
+	let settings = $("form.gen").formData(),
+	worldgen = $("#save form").formData(),
+	keybind = {};
+	const servers = new Map(),
+	saves = new Map(),
+	sound = {
+		rift: 'music/rift.mp3',
+		planets: 'music/planets.mp3',
+		destroy_ship: 'sfx/destry_ship.mp3',
+		warp_start: 'sfx/warp_start.mp3',
+		warp_end: 'sfx/warp_end.mp3',
+		laser_fire: 'sfx/laser_fire.mp3',
+		laser_hit: 'sfx/laser_hit.mp3',
+		ui: 'sfx/ui.mp3'
+	},
+	item = {},
+	tech = {};
+
+	const Action = class extends Promise{
+		static get [Symbol.species]() {
+			return Promise;
+		}
+		get [Symbol.toStringTag]() {
+			return 'Action';
+		}
+		abort(){
+			return false
+		}
+		onupdate(){}
+		onabort(){}
+		constructor(time, intervals, onupdate = () => {}){
+			if(!Number.isInteger(intervals)) throw new TypeError('Intervals must be an integer');
+			if(intervals < 1) throw new Error('Intervals must be greater than 0');
+			if(typeof onupdate != 'function') throw new TypeError('onupdate must be a function');
+			let abort;
+			super((resolve, reject) => {
+				let i = 0,
+				interval = setInterval(() => {
+					this.onupdate(i++);
+				}, (time-1)/intervals),
+				timeout = setTimeout(() => {
+					clearInterval(interval);
+					resolve(i);
+				}, time);
+				abort = msg => {
+					clearInterval(interval);
+					clearTimeout(timeout);
+					this.onabort(msg);
+					reject(msg);
+				};
+			});
+			this.abort = abort;
+			this.onupdate = onupdate;
+		}
+		
+	}
+	const locale = {
+		get(url){
+			return new Promise((resolve, reject) => {
+				let request = $.ajax(url, {async: false}), json = request.responseJSON;
+				json.language ||= json.lang;
+				if(request.status != 200){
+					reject(request.statusText);
+				}else if(typeof json != 'object' || !json.language|| !(json.version || json.versions) || !json.menu || !json.player){
+					reject('Incorrect format');
+					console.log
+				}else if(json.version != game.version && ![...json.versions].includes(game.version)){
+					reject('Wrong game version');
+				}else{
+					this.langs.set(json.language, json);
+					$('<option></option>')
+					.attr('value', json.language)
+					.text(json.name)
+					.appendTo('#settings form.gen select[name=locale]');
+					let transaction = db.transaction('locales', 'readwrite').objectStore('locales').put(json, json.language);
+					transaction.onsuccess = e => resolve(json);
+					transaction.onerror = e => reject('DB transaction failed');
+				}
+			});
+		},
+		load(id){
+			return new Promise((resolve, reject) => {
+				let transaction = db.transaction('locales').objectStore('locales').get(id);
+				transaction.onsuccess = e => {
+					this.langs.set(id, transaction.result);
+					$('<option></option>')
+					.attr('value', transaction.result.language)
+					.text(transaction.result.name)
+					.appendTo('#settings form.gen select[name=locale]');
+					resolve(transaction.result);
+				}
+				transaction.onerror = e => reject('DB transaction failed');
+				
+			});
+		},
+		clearCache(){
+			return new Promise((resolve, reject) => {
+				let transaction = db.transaction('locales').objectStore('locales').clear();
+				transaction.onsuccess = e => resolve();
+				transaction.onerror = e => reject('DB transaction failed');
+				
+			});
+		},
+		isCached(id){
+			return new Promise((resolve, reject) => {
+				let transaction = db.transaction('locales').objectStore('locales').count(id);
+				transaction.onsuccess = e => resolve(!!transaction.result);
+				transaction.onerror = e => reject('DB transaction failed');
+			});
+		},
+		getCached(){
+			return new Promise((resolve, reject) => {
+				let tx = db.transaction('locales').objectStore('locales').getAllKeys();
+				tx.onsuccess = e => resolve(tx.result);
+				tx.onerror = e => reject('DB transaction failed');
+			});
+		},
+		set(id){
+			return new Promise((resolve, reject) => {
+				if(!this.langs.has(id)) reject('Locale does not exist');
+				let lang = this.langs.get(id);
+				$('#main button.sp').text(lang.menu.singleplayer ?? 'Singleplayer');
+				$('#main button.mp').text(lang.menu.multiplayer ?? 'Multiplayer');
+				$('#main button.options,#esc button.options').text(lang.menu.options ?? 'Options');
+				$('#main button.exit').text(lang.menu.exit ?? 'Exit');
+				$('#esc button.resume').text(lang.menu.resume ?? 'Resume Game');
+				$('#esc button.save').text(lang.menu.save ?? 'Save Game');
+				$('#esc button.quit').text(lang.menu.quit ?? 'Main Menu');
+				$('#load button.upload').text(lang.menu.upload ?? 'Upload');
+				$(':where(#load,#save,#settings) button.back span').text(lang.menu.back ?? 'Back');
+				$(':where(#load button.new,#q button.map.new) span').text(lang.menu.new ?? 'New');
+				$('#save button.new span').text(lang.menu.start ?? 'Start');
+				$('#connect button.back span').text(lang.menu.cancel ?? 'Cancel');
+				$('#settings :where(button.gen,form.gen h2) span').text(lang.menu.general ?? 'General');
+				$('#settings :where(button.key,form.key h2) span').text(lang.menu.keybinds ?? 'Keybinds');
+				$('#q div.warp button.warp').text(lang.menu.warp ?? 'Warp');
+				$('#q div.nav button.inv span').text(lang.menu.items ?? 'Inventory');
+				$('#q div.nav button.map span').text(lang.menu.map ?? 'Waypoints');
+				$('#q div.nav button.screenshots span').text(lang.menu.screenshots ?? 'Screenshots');
+				$('#q div.nav button.warp span').text(lang.menu.hyperspace ?? 'Hyperspace');
+				$('#e div.nav button.trade span').text(lang.menu.trade ?? 'Trade');
+				$('#e div.nav button.yrd span').text(lang.menu.shipyard ?? 'Shipyard');
+				$('#e div.nav button.lab span').text(lang.menu.lab ?? 'Laboratory');
+				this.currentLang = id;
+			});
+		},
+		get text(){
+			return this.langs.get(this.langs.has(settings.locale) ? settings.locale : 'default');
+		},
+		currentLang: null,
+		langs: new Map([['default', $.ajax('locales/en.json', {async: false}).responseJSON]])
+	};
+
+	//load locales
+	locale.isCached('en').then(is => {
+		if(!is){
+			locale.get('locales/en.json').then(lang => locale.set('en'));
+
+		}
+	});
+
+	const game = {
+		canvas: $('canvas.game'),
+		engine: new Engine($("canvas.game")[0], true, { preserveDrawingBuffer: true, stencil: true }),
+		version: 'alpha_1.0.0',
+		versions: new Map([
+			['infdev_1', {text: 'Infdev 1', group: 'infdev'}],
+			['infdev_2', {text: 'Infdev 2', group: 'infdev'}],
+			['infdev_3', {text: 'Infdev 3', group: 'infdev'}],
+			['infdev_4', {text: 'Infdev 4', group: 'infdev'}],
+			['infdev_5', {text: 'Infdev 5', group: 'infdev'}],
+			['infdev_6', {text: 'Infdev 6', group: 'infdev'}],
+			['infdev_7', {text: 'Infdev 7', group: 'infdev'}],
+			['infdev_8', {text: 'Infdev 8', group: 'infdev'}],
+			['infdev_9', {text: 'Infdev 9', group: 'infdev'}],
+			['infdev_10', {text: 'Infdev 10', group: 'infdev'}],
+			['infdev_11', {text: 'Infdev 11', group: 'infdev'}],
+			['infdev_12', {text: 'Infdev 12', group: 'infdev'}],
+			['alpha_1.0.0', {text: 'Alpha 1.0.0', group: 'alpha'}]
+		]),
+		screenshots: [],
+		mods: new Map(),
+		function: {},
+		entityModels: new Map(),
+		frames: 0,
+		isPaused: true,
+		mp: false,
+		mpEnabled: true,
+		hitboxes: false,
+		difficulty: 1,
+		strobeInterval: null,
+		loadLocale: (locale) => {
+
+		},
+		setLocale: id => {
+			if(id instanceof Locale){
+
+			}
+		},
+		strobe: rate => {
+			if(game.strobeInterval){
+				clearInterval(game.strobeInterval);
+				$(':root').css('--hue', 200);
+				game.strobeInterval = null;
+			}else{
+				game.strobeInterval = setInterval(e => {
+					let hue = $(':root').css('--hue');
+					if(hue > 360) hue -= 360;
+					$(':root').css('--hue', ++hue);
+				}, 1000/rate);
+			}
+		},
+		createKeybind: (name, val, label, onTrigger) => {
+			keybind[name] = val;
+			$('#settings form.key').append(
+				$(`<label>${label}&nbsp;&nbsp;</label>`).attr('for', 'keybind.' + name),
+				$(`<button !sub name=${name}></button><br><br>`)
+					.text((keybind[name].ctrl ? 'Ctrl + ' : '') + (keybind[name].alt ? 'Alt + ' : '') + keybind[name].key)
+					.click(function(e){
+						e.preventDefault();
+						$(this).focus()
+					})
+					.on('keydown', function(e){
+						e.preventDefault();
+						let bind = keybind[this.name] = {
+							key: e.key,
+							ctrl: e.ctrlKey,
+							alt: e.altKey
+						};
+						$(this).text((bind.ctrl ? 'Ctrl + ' : '') + (bind.alt ? 'Alt + ' : '') + bind.key)
+					})
+			);
+			$('canvas.game,[ingame-ui],#hud,#hud_ship,#tablist').keydown(e => {
+				if(e.key == keybind[name].key && (!keybind[name].alt || e.altKey) && (!keybind[name].ctrl || e.ctrlKey)) onTrigger(e);
+			});
+		},
+		toggleChat: command => {
+			$('#chat,#chat_history').toggle();
+			if ($('#cli').toggle().is(':visible')){
+				document.exitPointerLock();
+				$('#cli').focus();
+				if(command){
+					$('#cli').val('/');
+				}
+				e.preventDefault();
+			}else{
+				game.canvas.focus();
+				game.canvas[0].requestPointerLock();
+			}
+		},
+		getEntity: sel => {
+			if (typeof sel != 'string') throw new TypeError('getEntity: selector must be of type string');
+			if (typeof saves.sel != 'string') throw new TypeError('getEntity: you must have a save selected');
+			switch (sel[0]) {
+				case '@':
+					return (sel.slice(1) == player.username || sel.slice(1) == player.id) ? player :
+						new ReferenceError('getEntity: multi-player entity selection not implemented');
+					break;
+				case '*':
+					return [...saves.get(saves.sel).entities.values()];
+					break;
+				case '#':
+					if(saves.get(saves.sel).entities.has(sel.slice(1))){
+						return saves.get(saves.sel).entities.get(sel.slice(1))
+					}else{
+						console.warn(`Entity ${sel} does not exist`);
+					}
+					break;
+			}
+		},
+		removeEntity: (...args) => {
+			for(let e of args){
+				let id = [...saves.get(saves.sel).entities].find(en => en[1] == e)?.[0];
+				if(e instanceof Entity && id){
+					e.remove();
+					saves.get(saves.sel).entities.delete(id);
+					for(let i in saves.get(saves.sel).levels){
+						for(let [id, body] of saves.get(saves.sel).levels[i].bodies){
+							if(body.fleet.includes(e)) body.fleet.splice(body.fleet.indexOf(e), 1);
+						};
+					};
+				}
+				else{
+					console.warn(`Can't remove ${e?.name}: not an entity or does not exist`);
+				}
+				if (player.data().fleet.includes(e)) player.data().fleet.splice(player.data().fleet.indexOf(e), 1);
+			}
+		},
+		getBody: sel => {
+			if (typeof sel != 'string') throw new TypeError('getBody: selector must be of type string');
+			if (typeof saves.sel != 'string') throw new TypeError('getBody: you must have a save selected');
+			switch (sel[0]) {
+				case '*':
+					let total = [];
+					for(let i in saves.get(saves.sel).levels){
+						total.push(...saves.get(saves.sel).levels[i].bodies.values())
+					}
+					return total
+					break;
+				case '#':
+					for(let i in saves.get(saves.sel).levels){
+						for(let [id, body] of saves.get(saves.sel).levels[i].bodies){
+							if(id == sel.slice(1)) return body;
+						}
+					};
+					break;
+			}
+		},
+		removeBody: (...args) => {
+			for(let body of args){
+				if(body instanceof CelestialBody){
+					for(let i in saves.get(saves.sel).levels){
+						saves.get(saves.sel).levels[i].bodies.delete(id);
+					};
+				}
+				else{
+					console.warn(`Can't remove ${body?.name}: not a CelestialBody`);
+				}	
+			}
+		},
+		cli: { line: 0, currentInput: "", i: $("#cli").val(), prev: [] },
+		scene: location => {
+			if (location instanceof Vector2 || location == undefined) {
+				return saves.get(saves.sel)?.levels[location instanceof Vector2 ? location.asArray() : game.currentLevel.asArray()] || game.scene.default;
+			} else {
+				throw new TypeError('Passed location must be a Vector2 or undefined.');
+			}
+
+		},
+		get currentLevel() { return saves.get(saves.sel) ? saves.get(saves.sel).currentLevel : Vector2.Zero() },
+		set currentLevel(val) { return saves.get(saves.sel) ? saves.get(saves.sel).currentLevel = val : console.warn('Tried to set currentLevel without a valid save') },
+		saveSettings: () => {
+			let settingsStore = db.transaction('settings', 'readwrite').objectStore('settings');
+			settings = $("form.gen").formData();
+			settingsStore.put(settings, 'general');
+			settingsStore.put(keybind, 'keybinds');
+		},
+		commands: {
+			help: name => {
+				open(web('docs/commands' + (name ? '#' + name : '')), 'target=_blank');
+			},
+			function: name => {
+				if (game.function[name] && !game.function[name].includes('function ' + name)) {
+					game.function[name].split('\n').forEach(game.runCommand);
+				} else if (game.function[name].includes('function ' + name)) {
+					throw new SyntaxError(`can not run function "${name}": functions can not run themselves`);
+				} else {
+					throw new ReferenceError(`function "${name}" does not exist`);
+				}
+			},
+			kill: selector => {
+				let e = game.getEntity(selector);
+				if(e.constructor.name == 'Array'){
+					game.removeEntity(...e);
+					return `killed ${e.length} entities`;
+				}else{
+					game.removeEntity(e);
+					return `killed entity #${e.id} ("${e.name}")`;
+				}
+			},
+			spawn: (type, selector, x, y, z) => {
+				let faction = game.getEntity(selector),
+				fleet = faction == player ? faction.data().fleet : faction.fleet,
+				spawned = new Ship(type, faction, faction == player ? saves.get(saves.sel) : faction.getSave());
+				spawned.addToScene(game.scene());
+				spawned.position = parseFloat(x) == x && parseFloat(y) == y && parseFloat(z) == z ? new Vector3(parseFloat(x), parseFloat(y), parseFloat(z)) : Vector3.Zero();
+			},
+			data: {
+				get: {
+					entity: (selector, path = '') => {
+						let entity = game.getEntity(selector);
+						if(entity instanceof Array){
+							throw new SyntaxError('passed selector can only return one entity');
+						}else{
+							let entityData = (entity == player ? entity.data() : entity).getByString(path),
+								entityName = entity == player ? '@' + entity.username : '#' + entity.id,
+								data = entityData;
+							if (typeof entityData == 'object' || typeof entityData == 'function') {
+								data = {};
+								for (let p of Object.getOwnPropertyNames(entityData)) {
+									data[p] = entityData[p];
+								}
+							}
+							return `Data of entity ${entityName}: ${data}`
+						}
+					},
+					object: (selector, path = '') => {
+						let object = game.getBody(path);
+						if(object instanceof Array){
+							throw new SyntaxError('passed selector can only return one object');
+						}else{
+							let objectData = object.getByString(path), data = objectData;
+							if(typeof objectData == 'object' || typeof objectData == 'function'){
+								data = {};
+								for(let p of Object.getOwnPropertyNames(objectData)){
+									data[p] = objectData[p];
+								}
+							}
+							return `Data of object #${object.id}: ` + data;
+						}
+					}
+				},
+				set: {
+					entity: (selector, path, value) => {
+						let entity = game.getEntity(selector);
+						if(entity instanceof Array){
+							throw new SyntaxError('passed selector can only return one entity');
+						}else{
+							(entity == player ? entity.data() : entity).setByString(path, eval?.(value));
+						}
+					},
+					object: (selector, path, value) => {
+						let object = game.getBody(selector);
+						if (object instanceof Array) {
+							throw new SyntaxError('passed selector can only return one object');
+						} else {
+							object.setByString(path, eval?.(value));
+						}
+					}
+				}
+			},
+			tp: (selector, x, y, z) => {
+				let entities = game.getEntity(selector),
+					location = new Vector3(+x || player.data().position.x, +y || player.data().position.y, +z || player.data().position.z);
+				if (entities instanceof Array) {
+					entities.forEach(entity => {
+						entity.position = location;
+						//TODO: properly implement with checks for ships
+					});
+					return `Teleported ${entities.length} to ${location.display()}`;
+				} else {
+					entities.position = location;
+					return `Teleported entities #${entities.id} to ${location.display()}`;
+				}
+			},
+			player: {
+				stop: () => {
+					player.stop();
+				},
+				reset: () => {
+					player.reset();
+				},
+				wipe: () => {
+					player.reset();
+					player.wipe();
+				}
+			},
+			warp: (x, y) => {
+				warp.start(new Vector2(parseFloat(x || 0), parseFloat(y || 0)))
+			},
+			playsound: (name, volume = settings.sfx) => {
+				if (sound[name]) {
+					playsound(name, volume)
+				} else {
+					throw new ReferenceError(`sound "${name}" does not exist`)
+				}
+			},
+			reload: () => {
+				//maybe also reload mods in the future
+				game.engine.resize();
+				game.scene().render();
+			}
+		},
+		runCommand: (command) => {
+				if(game.mp){
+					servers.get(servers.sel).socket.emit('command', command);
+				}else{
+					if (saves.sel && saves.get(saves.sel) instanceof Save) {
+						let commands = command.split(' '), hasRun = false;
+						let result = (commands.filter(p => p).reduce((o, p, i) => typeof o?.[p] == 'function' ? (hasRun = true, o?.[p](...commands.slice(i + 1))) : hasRun ? o : o?.[p] ? o?.[p] : new ReferenceError('Command does not exist'), game.commands) ?? '');
+						return result;
+					} else {
+						throw new ReferenceError('Can not run command, no save is selected');
+					}
+				}
+		},
+		chat: (...msg) => { for (let m of msg) { $(`<li bg=none></li>`).text(m).appendTo('#chat').fadeOut(1000 * settings.chat); $(`<li bg=none></li>`).text(m).appendTo('#chat_history')}},
+		error: (error, alrt) => { console.error(error); game.chat("Error: " + error) },
+		changeUI: (selector, hideAll) => {
+			if ($(selector).is(':visible')) {
+				game.canvas.focus();
+				game.canvas[0].requestPointerLock();
+				$(selector).hide();
+			} else if ($('[game-ui]').not(selector).is(':visible') && hideAll) {
+				game.canvas.focus();
+				game.canvas[0].requestPointerLock();
+				$('[game-ui]').hide();
+			} else if (!$('[game-ui]').is(':visible')) {
+				document.exitPointerLock();
+				$(selector).show().focus();
+			}
+		}
+	};
+	const Entity = class extends TransformNode{
+		static generic = new Map();
+		static loadType(data){
+			Entity.generic.set(data.id, {
+				...data,
+				model: null
+			});
+		}
+		constructor(save, id = rand.hex(32), owner = null){
+			super(id, save.levels[save.currentLevel]);
+			this.id = id;
+			this.owner = owner;
+			this.meshes = new Map();
+			if(save instanceof Save) save.entities.set(this.id, this);
+		}
+		addToScene(scene = game.scene()){
+			if(!(scene instanceof Level)) throw new TypeError('passed scene must be a level');
+			if(this.meshes.has(scene.id)) return console.warn('Mesh already exists');
+			let instance =
+			typeof scene.genericEntities[this.type]?.instantiateModelsToScene == 'function' ?
+			scene.genericEntities[this.type].instantiateModelsToScene().rootNodes[0] :
+			new TransformNode(this.id, scene);
+			instance.id = `${this.id}.${scene.id}`;
+			if(this.owner){
+				instance.setParent(this.owner);
+			}
+			this.meshes.set(scene.id, instance);
+			instance.onMeshReadyObservable = e => {
+				console.log('ready!')
+			}
+		}
+		removeFromScene(scene = game.scene()){
+			this.meshes.get(scene.id).dispose();
+			this.meshes.delete(scene.id);
+		}
+		remove(){
+			this.meshes.forEach(mesh => mesh.dispose());
+		}
+		mesh(scene = game.scene()){
+			return this.meshes.get(scene.id);
+		}
+		toString(){
+			return `Entity #${this.id}`
+		}
+	}
+	const CelestialBody = class extends Mesh {
+		getSave(){
+			return this._save;
+		}
+		fleet = [];
+		owner = null;
+		fleetLocation = new TransformNode(Vector3.Zero());
+		constructor(name, id = rand.hex(32), scene) {
+			super(name, scene);
+			this.id = id;
+			this._save = scene.getSave();
+			scene ? scene.bodies.set(id, this) : console.warn('CelestialBody(): scene passed without "bodies" property');
+		}
+	}
+	const CelestialBodyMaterial = class extends ShaderMaterial{
+		static updateRandom(texture){
+			if(!(texture instanceof DynamicTexture)) throw new TypeError(`Can't update texture: not a dynamic texture`);
+			let context = texture.getContext(),
+
+        	imageData = context.getImageData(0, 0, 512, 512);
+
+			for(let i = 0; i < 1048576; i++){
+				imageData.data[i] = (Math.random() * 256) | 0
+			}
+			context.putImageData(imageData, 0, 0);
+        	texture.update();
+		}
+		constructor(options, scene){
+			options.mapSize = 1024;
+			options.maxResolution = [64, 256, 1024][settings.render_quality];
+			let id = rand.hex(8);
+			super('CelestialBodyMaterial#' + id, scene, './shader/planet', {
+				attributes: ["position", "normal", "uv"],
+				uniforms: ["world", "worldView", "worldViewProjection", "view", "projection"],
+				needAlphaBlending: true
+			});
+			this.generationOptions = options;
+			this.rotationFactor = Math.random();
+			this.matrixAngle = 0;
+			
+			this.noiseSampler = new DynamicTexture('CelestialBodyMaterial.randomSampler#' + id, 512, scene, false, Texture.NEAREST_SAMPLINGMODE);
+			this.cloudSampler = new DynamicTexture('CelestialBodyMaterial.randomSampler#' + id, 512, scene, false, Texture.NEAREST_SAMPLINGMODE);
+		
+			this.setVector3('cameraPosition', player.cam.position);
+			this.setVector3('lightPosition', Vector3.Zero());
+
+			CelestialBodyMaterial.updateRandom(this.noiseSampler);
+			CelestialBodyMaterial.updateRandom(this.cloudSampler);
+
+			this.noiseTexture = new ProceduralTexture('noise', options.mapSize, './shader/noise', scene, null, true, true);
+			this.noiseTexture.setColor3('upperColor', options.upperColor);
+			this.noiseTexture.setColor3('lowerColor', options.lowerColor);
+			this.noiseTexture.setFloat('mapSize', options.mapSize);
+			this.noiseTexture.setFloat("maxResolution", options.maxResolution);
+			this.noiseTexture.setFloat("seed", options.seed);
+			this.noiseTexture.setVector2("lowerClamp", options.lowerClamp);
+			this.noiseTexture.setTexture("randomSampler", this.noiseSampler);
+			this.noiseTexture.setVector2("range", options.range);
+			this.noiseTexture.setVector3("options", new Vector3(options.directNoise ? 1.0 : 0, options.lowerClip.x, options.lowerClip.y));
+			this.noiseTexture.refreshRate = 0;
+
+			this.setTexture("textureSampler", this.noiseTexture);
+
+			// Cloud
+			this.cloudTexture = new ProceduralTexture("cloud", options.mapSize, "./shader/cloud", scene, null, true, true);
+			this.cloudTexture.setTexture("randomSampler", this.cloudSampler);
+			this.cloudTexture.setFloat("mapSize", options.mapSize);
+			this.cloudTexture.setFloat("maxResolution", options.maxResolution);
+			this.cloudTexture.setFloat("seed", options.cloudSeed);
+			this.cloudTexture.setVector3("options", new Vector3(1.0, 0, 0));
+			this.cloudTexture.refreshRate = 0;
+			this.cloudTexture.setVector2("lowerClamp", options.lowerClamp);
+			this.cloudTexture.setVector2("range", options.range);
+
+			this.setTexture("cloudSampler", this.cloudTexture);
+
+			this.setColor3("haloColor", options.haloColor);
+		}
+	}
+	game.scene.default = new Scene(game.engine);
+	//game.scene.default = new Level('GAME_DEFAULT_SCENE',1,false);
+	Object.assign(game.scene.default, {
+		name: 'GAME_DEFAULT_SCENE',
+		clearColor: new Color3(0.8, 0.75, 0.85),
+		gl: new GlowLayer('GAME_DEFAULT_GLOWLAYER', game.scene.default),
+		entities: new Map(),
+		bodies: new Map(),
+		waypoints: []
+	});
+	const Waypoint = class extends Node{
+		#readonly = false;
+		static dialog(wp){
+			modal([
+				{name: 'name', text: 'Name', value: wp instanceof Waypoint ? wp.name : null},
+				{name: 'color', text: 'Color', value: wp instanceof Waypoint ? wp.color.toHexString() : null},
+				{name: 'x', text: 'X', value: wp instanceof Waypoint ? wp.position.x : null},
+				{name: 'y', text: 'Y', value: wp instanceof Waypoint ? wp.position.y : null},
+				{name: 'z', text: 'Z', value: wp instanceof Waypoint ? wp.position.z : null},
+			], {Cancel: false, Save: true}).then(data => {
+				if(data.result){
+					if(!isHex(data.color.slice(1))){
+						alert(locale.text.error.waypoint.color);
+					}else if(Math.abs(data.x) > 99999 || Math.abs(data.y) > 99999 || Math.abs(data.z) > 99999){
+						alert(locale.text.error.waypoint.range);
+					}else if(wp instanceof Waypoint){
+						Object.assign(wp, {
+							name: data.name,
+							color: Color3.FromHexString(data.color),
+							position: new Vector3(data.x, data.y, data.z)
+						});
+						ui.update();
+					}else{
+						new Waypoint({
+							name: data.name,
+							color: Color3.FromHexString(data.color),
+							position: new Vector3(data.x, data.y, data.z)
+						}, game.scene());
+						ui.update();
+					}
+				}
+			});
+			
+		}
+		get readonly(){
+			return this.#readonly;
+		}
+		gui(row){
+			let ui = $(`
+				<span style=text-align:center;grid-row:${row};grid-column:2;><svg><use href=image/icons.svg#pencil /></svg></span>
+				<span style=text-align:center;grid-row:${row};grid-column:3;><svg><use href=image/icons.svg#trash /></svg></span>
+				<span style=text-align:center;grid-row:${row};grid-column:4;><svg><use href=image/icons.svg#${this.icon} /></svg></span>
+				<span style=text-align:left;grid-row:${row};grid-column:5;color:${this.color.toHexString()}>${this.name}</span>
+			`).attr('bg','none');
+			ui.filter('span').eq(0).attr('clickable', '').click(e => {
+				Waypoint.dialog(this);
+			}),
+			ui.filter('span').eq(1).attr('clickable', '').click(e => {
+				confirm().then(() => {
+					this.marker.remove();
+					game.scene().waypoints.splice(this.getScene().waypoints.indexOf(this), 1);
+				});
+			});
+			return this.readonly ? ui.filter('span:gt(1)') : ui;
+		}
+		get screenPos(){
+			return Vector3.Project(this.position, Matrix.Identity(), game.scene().getTransformMatrix(), {x: 0, y: 0, width, height});
+		}
+		constructor({
+			id = rand.hex(32),
+			name = 'Waypoint',
+			position = Vector3.Zero(),
+			color = new Color3(rand.real, rand.real, rand.real),
+			icon = 'location-dot',
+			readonly = false
+		}, scene = game.scene()){
+			super(id, scene);
+			scene.waypoints.push(this);
+			this.#readonly = readonly;
+			Object.assign(this, {name, position, color, icon});
+			this.marker = $(`<svg ingame><use href=image/icons.svg#${icon} /></svg><p ingame style=justify-self:center></p>`).addClass('marker').appendTo('body');
+			this.marker.filter('p').css('text-shadow', '1px 1px 1px #000')
+		}
+	}
+	const StorageData = class extends Map{
+		max = 1;
+		constructor({max, items}){
+			super(Object.keys(item).map(i => [i, 0]))
+			this.max = max;
+		}
+		get total(){
+			return [...this.values()].reduce((a, c) => a + c, 0);
+		}
+		empty(){
+			this.forEach(item => item = 0);
+		}
+		serialize(){
+			return Object.fromEntries([...this]);
+		}
+		add(item, amount){
+			this.set(item, this.get(item) + amount);
+		}
+		sub(item, amount){
+			this.set(item, this.get(item) - amount);
+		}
+	};
+	const PlayerData = class extends TransformNode{
+		get items(){
+			let items = {};
+			Object.keys(item).forEach(item => {
+				items[item] = 0;
+				this.fleet.forEach(ship => {
+					items[item] += ship.storage.get(item);
+				});
+			});
+			return items;
+		}
+
+		set items(value){
+			console.error('can not set items');
+		}
+		addItems(items){
+			this.fleet.forEach(ship => {
+				let space = ship.storage.max - ship.storage.total;
+				if(space > 0){
+					Object.entries(items).forEach(([item, amount]) => {
+						let stored = Math.min(space, amount);
+						ship.storage.add(item, stored)
+						items[item] -= stored;
+						space -= stored;
+					});
+				}
+			});
+		}
+		removeItems(items){
+			this.fleet.forEach(ship => {
+				Object.entries(items).forEach(([item, amount]) => {
+					let stored = Math.min(ship.storage.get(item), amount);
+					ship.storage.remove(item, stored)
+					items[item] -= stored;
+				});
+			});
+		}
+		hasItems(items){
+			this.fleet.forEach(ship => {
+				Object.entries(items).forEach(([item, amount]) => {
+					let stored = Math.min(ship.storage.get(item), amount);
+					items[item] -= stored;
+				});
+			});
+			return Object.values(items).every(item => item <= 0);
+		}
+		get totalItems(){
+			return this.fleet.reduce((total, ship) => total + ship.storage.total, 0)
+		}
+		get maxItems(){
+			return this.fleet.reduce((total, ship) => total + ship.storage.max, 0);
+		}
+		shipNum(type){
+			return this.fleet.reduce((total, ship) => total + ship.type == type ? 1 : 0, 0)
+		}
+		tech = {};
+		fleet = [];
+		xp = 0;
+		xpPoints = 0;
+		get power(){
+			return this.fleet.reduce((a, ship) => a + ship.power, 0);
+		}
+		constructor(data, level){
+			if(!(level instanceof Scene)) throw new TypeError('passed level not a Scene');
+			super(data.id, level);
+			Object.assign(this, data);
+			this.rotation.z = Math.PI;
+		}
+	}
+	/*const Player = class extends Entity{
+		constructor(data){
+			super(data.name || 'player', rand.cords(rand.int(0, 50), true).add(new Vector3(0, 0, -1000)), game.scene())
+		}
+	}*/
+	const playerData = new PlayerData({id: 'DEFAULT'}, game.scene());
+	const player = {
+		username: '', marker: {}, speed: 1, velocity: Vector3.Zero(), camIsActive: true, rcsIsActive: true,
+		cam: new ArcRotateCamera('player.cam', 0, 0, 5, Vector3.Zero(), game.scene()), targetBody: null,
+		arcMode: true,
+		updateFleet: () => {
+			
+			player.data().fleet.forEach((s, i) => {
+				if(s.hp <= 0){
+					s.remove();
+					player.data().fleet.splice(i, 1);
+					playsound(sound.destroy_ship, settings.sfx)
+				}
+				if(!s.mesh()){
+					s.addToScene();
+				}
+			});
+			if(player.data().fleet.length <= 0){
+				game.chat(locale.text.player.death);
+				player.reset();
+				player.wipe();
+				Ship.battle = null;
+				let s = new Ship('frigate', player, saves.get(saves.sel));
+				s.addToScene(game.scene());
+			}
+		},
+		chat: (...msg) => { for (let m of msg) { game.chat((`${player.username}: ${m}`).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')) } },
+		stop: (delay = 0) => { setTimeout(e => { player.velocity = Vector3.Zero(); player.data().fleet.forEach(s => { s.velocity = Vector3.Zero() }) }, (+delay) || 0) },
+		reset: noStop => { player.data().position = rand.cords(rand.int(0, 50), true).add(new Vector3(0, 0, -1000)); player.data().rotation = Vector3.Zero(); player.cam.alpha = 0; player.cam.beta = 0; if (!noStop) player.stop() },
+		hasItems: items => { let has = true; for (let i in items) { if (player.data().items[i] < items[i]) { has = false } } return has },
+		removeItems: items => { for (let i in items) { item[i] ? player.data().items[i] -= items[i] : game.error(`removeItems failed: item "${i}" does not exist`) } },
+		giveItems: items => { for (let i in items) { item[i] ? player.data().items[i] += items[i] : game.error(`giveItems failed: item "${i}" does not exist`) } },
+		wipe: () => { for (let i in item) { player.data().items[i] = 0 }; for (let i in tech) { player.data().tech[i] = 0 }; for (let i in player.data().fleet) { player.data().fleet[i].remove() } player.data().fleet = [] },
+		data: id => saves.get(saves.sel)?.playerData?.[id ?? player.id] ?? playerData,
+		levelOf: xp => Math.sqrt(xp / 10),
+		xpOf: level => 10 * level ** 2
+	};
+	Object.assign(player.cam, { radius: 25, upperRadiusLimit: 50, lowerRadiusLimit: 5 });
+	const Ship = class extends Entity{
+		static battle = null;
+		static generic = {
+			corvette: {
+				hp: 10, damage: 0.1, reload: 0.5, maxLevel: 5,
+				power: 1, enemy: true, camRadius: 10, xp: 5, storage: 100,
+				critChance: 0.1, critDamage: 1.5,
+				recipe: [
+					{ metal: 1000, minerals: 500, fuel: 250 },
+					{ ancient_tech: 1, code_snippets: 1 },
+					{ ancient_tech: 2, code_snippets: 2 },
+					{ ancient_tech: 4, code_snippets: 5 },
+					{ ancient_tech: 8, code_snippets: 10 }, 
+					{ ancient_tech: 16, code_snippets: 20 }
+				], requires: {},
+				model: 'model/corvette.gltf'
+			},
+			frigate: {
+				hp: 25, damage: 0.5, reload: 1, maxLevel: 5,
+				power: 2, enemy: true, camRadius: 15, xp: 7.5, storage: 250,
+				critChance: 0.25, critDamage: 1.25,
+				recipe: [
+					{ metal: 2000, minerals: 2000, fuel: 500 },
+					{ ancient_tech: 2, code_snippets: 5 },
+					{ ancient_tech: 4, code_snippets: 10 },
+					{ ancient_tech: 7, code_snippets: 20 },
+					{ ancient_tech: 9, code_snippets: 30 },
+					{ ancient_tech: 12, code_snippets: 35 }
+				], requires: {},
+				model: 'model/corvette.gltf'
+			},
+			crusier: {
+				hp: 50, damage: 1, reload: 2, maxLevel: 5,
+				power: 5, enemy: true, camRadius: 20, xp: 10, storage: 250,
+				critChance: 0.1, critDamage: 1.25,
+				recipe: [
+					{ metal: 4000, minerals: 1000, fuel: 1000 },
+					{ ancient_tech: 3, code_snippets: 10 },
+					{ ancient_tech: 5, code_snippets: 20 },
+					{ ancient_tech: 8, code_snippets: 30 },
+					{ ancient_tech: 12, code_snippets: 40 },
+					{ ancient_tech: 18, code_snippets: 50 }
+				], requires: {},
+				model: 'model/crusier.gltf'
+			},
+			destroyer: {
+				hp: 100, damage: 2.5, reload: 1, maxLevel: 5,
+				power: 10, enemy: true, camRadius: 30, xp: 20, storage: 1000,
+				critChance: 0.25, critDamage: 1.5,
+				recipe: [
+					{ metal: 10000, minerals: 4000, fuel: 2500 },
+					{ ancient_tech: 8, code_snippets: 25 },
+					{ ancient_tech: 12, code_snippets: 40 },
+					{ ancient_tech: 20, code_snippets: 60 },
+					{ ancient_tech: 35, code_snippets: 85 },
+					{ ancient_tech: 60, code_snippets: 100 }
+				], requires: {},
+				model: 'model/destroyer.gltf'
+			},
+			battleship: {
+				hp: 250, damage: 10, reload: 2, maxLevel: 5,
+				power: 25, enemy: true, camRadius: 40, xp: 50, storage: 2500,
+				critChance: 0.2, critDamage: 1.25,
+				recipe: [
+					{ metal: 25000, minerals: 10000, fuel: 5000 },
+					{ ancient_tech: 10, code_snippets: 20 },
+					{ ancient_tech: 25, code_snippets: 25 },
+					{ ancient_tech: 45, code_snippets: 40 },
+					{ ancient_tech: 70, code_snippets: 55 },
+					{ ancient_tech: 100, code_snippets: 70 }
+				], requires: {},
+				model: 'model/battleship.gltf'
+			},
+			dreadnought: {
+				hp: 2000, damage: 100, reload: 4, maxLevel: 5,
+				power: 100, enemy: true, camRadius: 65, xp: 100, storage: 10000,
+				critChance: 0.2, critDamage: 1.5,
+				recipe: [
+					{ metal: 1000000, minerals: 500000, fuel: 250000 },
+					{ ancient_tech: 25, code_snippets: 50 },
+					{ ancient_tech: 50, code_snippets: 75 },
+					{ ancient_tech: 100, code_snippets: 88 },
+					{ ancient_tech: 150, code_snippets: 100 },
+					{ ancient_tech: 250, code_snippets: 125 }
+				], requires: { build: 5 },
+				model: 'model/dreadnought.gltf'
+			}
+		}
+		constructor(typeOrData, faction = player, save){
+			super(save ?? (faction == player && saves.get(saves.sel) instanceof Save ? saves.get(saves.sel) : faction.getSave()), typeof typeOrData == 'object' ? typeOrData.id : undefined, faction == player ? faction.data() : faction);
+			
+			if(typeof typeOrData == 'object'){
+				Object.assign(this, {
+					type: typeOrData.shipType ?? typeOrData.type,
+					position: Vector3.FromArray(typeOrData.position),
+					rotation: Vector3.FromArray(typeOrData.rotation),
+					storage: new StorageData(typeOrData.storage),
+					velocity: Vector3.Zero()
+				}).copyFrom(typeOrData, ['hp', 'damage', 'level', 'power', 'reload']);
+			}else{
+				
+				Object.assign(this, {
+					velocity: Vector3.Zero(),
+					level: 0,
+					position:  rand.cords(rand.int(1, faction.power)),
+					rotation: new Vector3(0, Math.PI, 0),
+					storage: new StorageData({max: Ship.generic[typeOrData].storage}),
+					type: typeOrData,
+				});
+				this.copyFrom(Ship.generic[typeOrData], ['hp', 'damage', 'reload', 'power']);
+				this.reload += Math.random() * Ship.generic[typeOrData].reload;
+			}
+			
+			if(faction instanceof CelestialBody || faction == player){
+				(faction == player ? faction.data() : faction).fleet.push(this);
+			}
+			
+		}
+	}
+	const warp = {
+		energy: 100, maxEnergy: 100, cooldown: 0,
+		start: (destination, ignoreCooldown) => {
+			let distance = Vector2.Distance(game.currentLevel, destination);
+			if(Ship.battle){game.chat("You can't enter hyperspace while in a battle.")}
+			else if(this.cooldown > 0 && !ignoreCooldown){game.chat("Hyperspace is on cooldown")}
+			else if(distance > warp.energy){game.chat('That location is out of range')}
+			else{
+				function done(){
+					
+					warp.cooldown = new Action(distance * 1000, 100, i => {
+
+					});
+					game.currentLevel = destination;
+					player.cam._scene = game.scene(destination);
+					game.chat(`Warped to ${destination.x},${destination.y} (${game.scene().name})`);
+					player.reset();
+					playsound(sound.warp_end, settings.sfx);
+				}
+				if(!(saves.get(saves.sel).levels[destination.asArray()] instanceof Level)){
+					new Level(saves.get(saves.sel).systems[destination.asArray()] || 'Empty Space', destination, !!saves.get(saves.sel).systems[destination.asArray()], lvl => {
+						saves.get(saves.sel).levels[destination.asArray()] = lvl;
+						done();
+					}, saves.get(saves.sel));
+				}else{
+					done();
+				}
+			}
+		}
+	};
+	const ui = {};
+	if (cookie.token && navigator.onLine) {
+		$.get(web('api/user'), { token: cookie.token, session: true }, req => {
+			player.authData = req;
+			if (isJSON(req)) {
+				let res = JSON.parse(req);
+				Object.assign(player, res);
+				localStorage.auth = req.split('').map(e => e.charCodeAt(0).toString(16)).join(' ');
+				document.cookie = 'auth=' + btoa(req);
+				player.freezeProperty(...Object.keys(res));
+			}
+			else if (req == undefined) {
+				game.chat('Failed to connect to account servers.')
+			}
+			else if (req == 'ERROR 404') {
+				game.chat('Invalid token, please log in again and reload the game to play multiplayer.');
+			}
+		});
+	}
+	else if(cookie.auth && localStorage.auth){
+		let localJSON = localStorage.auth.split(' ').map(e => String.fromCharCode(parseInt(e, 16))).join('');
+		if (isJSON(localJSON) && isJSON(atob(cookie.auth))){
+			let localData = JSON.parse(localJSON), data = player.authData = JSON.parse(atob(cookie.auth));
+			Object.assign(player, data);
+			player.freezeProperty(...Object.keys(data));
+		}else{
+			game.chat('Error: Invalid auth data.')
+		}
+	}
+	else{
+		game.mpEnabled = false;
+		game.chat('You\'re not logged in, and will not be able to play multiplayer.')
+	}
+	let transaction = db.transaction('settings', 'readonly').objectStore('settings').get('general');
+	transaction.onsuccess = e => {
+		//let startTime = Date.now();
+		//console.log(`[${Date.now() - startTime}] settings retrieved: ${settings.locale}`);
+		settings = transaction.result ?? settings;
+		//console.log(`[${Date.now() - startTime}] settings loaded: ${settings.locale}`);
+		locale.getCached().then(locales => {
+			//console.log(`[${Date.now() - startTime}] locales retrieved: ${settings.locale}`);
+			locales.forEach(lang => {
+				//console.log(`[${Date.now() - startTime}] testing locale "${lang}": ${settings.locale}`);
+				if(!locale.langs.has(lang)){
+					locale.load(lang).then(() => {
+						//console.log(`[${Date.now() - startTime}] loaded locale "${lang}": ${settings.locale}`);
+						if('en' == lang){
+							locale.set('en');
+						}
+					})
+				}
+			});
+		});
+		$('form.gen').formData(settings);
+		ui.update();
+		delete transaction;
+	}
+	transaction.onerror = e => {
+		console.warn(`Couldn't find saved settings.`);
+		$('form.gen').formData(settings);
+		delete transaction;
+	}
+
+	
+
+	Object.defineProperties(tech, {
+		price: {
+			value: type => {
+				let recipe = { ...tech[type].recipe };
+				for (let p in tech[type].recipe) {
+					for (let i = 1; i < player.data().tech[type]; i++) {
+						recipe[p] *= tech[type].scale
+					};
+				}
+				return recipe
+			},
+			enumerable: false
+		},
+		locked: {
+			value: type => {
+				for (let i in tech[type].requires) {
+					if ((tech[type].requires[i] > 0 && player.data().tech[i] < tech[type].requires[i]) || (tech[type].requires[i] == 0 && player.data().tech[i] > 0)) {
+						return true
+					}
+				}
+				return false
+			},
+			enumerable: false
+		}
+	});
+	Object.defineProperty(item, 'multiplyer', { value: 1 + (1 - settings.difficulty), enumerable: false });
+	game.freezeProperty('version', 'versions', 'mpEnabled', 'scene', 'log', 'chat');
+	player.freezeProperty('updateFleet', 'move', 'stop', 'reset', 'hasItems', 'removeItems', 'giveItems', 'wipe', 'chat');
+	onresize = e => { game.engine.resize(); console.warn('Do not paste any code someone gave you, as they may be trying to steal your information') };
+	if (!game.mpEnabled) {
+		$('#main .mp').hide();
+		$('#main .options').attr('plot', 'c,360px,350px,50px');
+		$('#main button.exit').attr('plot', 'c,460px,350px,50px');
+	}
+
+	game.createKeybind('forward', {key: 'w'}, 'Forward', e => {
+		let n = player.camIsActive ? player : player.data().fleet[player.data().fleet.sel],
+			acceleration = (player.camIsActive ? 1 : -1) * (player.speed + player.data().tech.thrust / 10);
+		n.velocity.addInPlace((player.camIsActive ? n.data() : n).getDirection(new Vector3(0, 0, acceleration).divide(new Vector3(60, 60, 60))));
+	});
+	game.createKeybind('left', {key: 'a'}, 'Rotate Left', e => { (player.camIsActive ? player.data().rotation : player.data().fleet[player.data().fleet.sel].rotation).y -= (Math.PI / 40 * settings.sensitivity)});
+	game.createKeybind('right', {key: 'd'}, 'Rotate Right', e => { (player.camIsActive ? player.data().rotation : player.data().fleet[player.data().fleet.sel].rotation).y += (Math.PI / 40 * settings.sensitivity)});
+	game.createKeybind('back', {key: 's'}, 'Backward', e => {
+		let n = player.camIsActive ? player : player.data().fleet[player.data().fleet.sel],
+			acceleration = (player.camIsActive ? -1 : 1) * (player.speed + player.data().tech.thrust / 10);
+		n.velocity.addInPlace((player.camIsActive ? n.data() : n).getDirection(new Vector3(0, 0, acceleration).divide(new Vector3(60, 60, 60))));
+	});
+	game.createKeybind('chat', {key: 't'}, 'Toggle Chat', e => {e.preventDefault();game.toggleChat()});
+	game.createKeybind('command', {key: '/'}, 'Toggle Command', e => {e.preventDefault();game.toggleChat(true)});
+	game.createKeybind('rcs', {key: 'f'}, 'Toggle RCS', e => {
+		player.rcsIsActive = !player.rcsIsActive;
+		$('#hud .rcs').text(`RCS: ${player.rcsIsActive ? 'ON' : 'OFF'}`);
+	});
+	game.createKeybind('nav', {key: 'q'}, 'Toggle Navigation', e => {
+		game.changeUI('#q');
+	});
+	game.createKeybind('inv', {key: 'e'}, 'Toggle Inventory', e => {
+		game.changeUI('#e');
+	});
+	game.createKeybind('view',{key: 'r'}, 'Toggle View Mode', e => {
+		player.camIsActive = !player.camIsActive;
+		player.data().fleet.sel ||= 0;
+		Object.assign(player.cam, {
+			lowerRadiusLimit: Ship.generic[player.data().fleet[player.data().fleet.sel].type].camRadius,
+			upperRadiusLimit: Ship.generic[player.data().fleet[player.data().fleet.sel].type].camRadius
+		});
+		$('#hud_ship').toggle();
+		ui.update()
+	});
+	game.createKeybind('screenshot', {key: 'F2'}, 'Take Screenshot', e => {
+		game.screenshots.push(game.canvas[0].toDataURL("image/png")); ui.update();
+	});
+	game.createKeybind('save', {key: 's', ctrl: true}, 'Save Game', e => {
+		if(saves.get(saves.sel) instanceof Save){
+			$('#esc .save').text('Saving...');
+			let dbCall = db.transaction('saves','readwrite').objectStore('saves').put(saves.get(saves.sel).serialize(), saves.sel);
+			dbCall.onsuccess = e => {
+				game.chat('Game Saved.');
+				$('#esc .save').text('Save Game');
+			};
+			dbCall.onerror = err => {
+				game.chat('Failed to save game: ' + err);
+				$('#esc .save').text('Save Game');
+			};
+		}else{throw 'Save Error: you must have a valid save selected.'}
+	});
+
+	//Some stuff done on initalization
+	document.title = "Blankstorm " + game.versions.get(game.version).text;
+	$("#main .version").html(`<a href="${web('/versions#' + game.version)}" target="_blank">${game.versions.get(game.version).text}</a>`);
+	console.log(`%cBlankstorm ${game.versions.get(game.version).text}`, `color:#f55`);
+
+	//load mods & keybinds into the game
+	db.transaction('settings', 'readonly').objectStore('settings').get('keybinds').onsuccess = e => {
+		for (let i in e.target.result){
+			let bind = e.target.result[i];
+			if(typeof bind == 'string'){
+				bind = {
+					key: e.target.result[i],
+					ctrl: false,
+					alt: false
+				}
+			}
+			keybind[i] = bind ?? keybind[i];
+		}
+		$('form.key').formData(keybind);
+	};
+	db.transaction('mods', 'readonly').objectStore('mods').getAll().onsuccess = e => {
+		console.log('Loaded mods: ' + e.target.result.join('\n'))
+	};
+	const gen = {
+		enemies: power => {//enemy spawning algorithm
+			let e = [], p = [];
+			for (let i in Ship.generic) { Ship.generic[i].enemy ? p.push(Ship.generic[i].power) : 0 }
+			p.sort((c1, c2) => { if (c1 > c2) { return -1 } else if (c2 > c1) { return 1 } else { return 0 } });
+			for (let i = 0; i < p.length; i++) { for (let j in Ship.generic) { (p[i] == Ship.generic[j].power) ? p[i] = j : 0 } }
+			for (let i = 0; i < p.length; i++) {
+				for (let j = 0; j < Math.floor(power / Ship.generic[p[i]].power); j++) {
+					e.push(p[i]); power -= Ship.generic[p[i]].power
+				}
+			}
+			e.power = power;
+			return e
+		},
+		items: (quantity = 0, rares) => {
+			let q = quantity;
+			let r = {};
+			for (let i in item) {
+				(item[i].rare) ? (Math.random() < item[i].drop && rares) ? r[i] = quantity / item[i].value : r[i] = 0 : r[i] = quantity / item[i].value;
+			}
+			return r;
+		}
+	};
+	Object.assign(ui, {
+		yrd: (shiptype, row) => {
+			let s = Ship.generic[shiptype], buildCost = '', upgradeCost = '', techRequires = '';
+			for (let m in s.recipe[0]) {
+				buildCost += `<br>${locale.text.item[m].name}: ${minimize(player.data().items[m])}/${minimize(s.recipe[0][m])}`
+			}
+			for (let i in s.requires) {
+				techRequires += (s.requires[i] > 0) ? `<br>${locale.text.tech[i].name}: ${player.data().tech[i]}/${s.requires[i]}` : `<br>Incompatible with ${locale.text.tech[i].name}`
+			}
+			let gui = $(`
+				<span style=text-align:right;grid-row:${row};grid-column:1;><svg style=font-size:1.5em><use href=image/icons.svg#lock /></svg></span>
+				<span style=text-align:center;grid-row:${row};grid-column:2;>[${player.data().shipNum(shiptype)}] ${locale.text.entity[shiptype].name}</span>
+				<span style=text-align:left;grid-row:${row};grid-column:3;><svg style=font-size:1.5em><use href=image/icons.svg#circle-plus /></svg></span>
+			`);
+			gui.eq(-1).children('svg')
+				.click(e => {
+					if(player.hasItems(s.recipe[0])){
+						player.removeItems(s.recipe[0]);
+						new Ship(shiptype, player, saves.get(saves.sel));
+					}
+					ui.update();
+				})
+				.tooltip(`${locale.text.entity[shiptype].description}<br><colorbr><strong>Material Cost</strong>${buildCost}<br>${Object.keys(s.requires).length ? `<br><strong>Requires:</strong>` : ``}${techRequires}${settings?.debug_tooltips ? '<br>type: ' + shiptype : ''}`);
+			return gui;
+		},
+		lab: (t, row) => {
+			if (tech[t] == undefined) throw new ReferenceError(`UI: Lab: techtype "${t}" is undefined`);
+			let gui = $(`
+				<span style=text-align:right;grid-row:${row};grid-column:1;><svg style=font-size:1.5em><use href=image/icons.svg#lock /></svg></span>
+				<span style=text-align:center;grid-row:${row};grid-column:2;>${locale.text.tech[t].name}</span>
+				<span style=text-align:left;grid-row:${row};grid-column:3;><svg style=font-size:1.5em><use href=image/icons.svg#circle-up /></svg></span>
+			`);
+			gui.click(e => {
+				if(player.hasItems(tech.price(t)) && player.data().tech[t] < tech[t].max && !tech.locked(t) && player.data().xpPoints >= 1){
+					player.removeItems(tech.price(t));
+					player.data().tech[t]++;
+					player.data().xpPoints--;
+				}
+				ui.update();
+			});
+			
+			let upgradeCost = Object.entries(tech.price(t)).reduce((a, [k, v]) => a + `<br>${locale.text.item[k].name}: ${minimize(player.data().items[k])}/${minimize(v)}`, ''),
+			techRequires = Object.entries(tech[t].requires).reduce((a, [k, v]) => a + (v > 0) ? `<br>${locale.text.tech[k].name}: ${player.data().tech[k]}/${v}` : `<br>Incompatible with ${locale.text.tech[k].name}`, '');
+			gui.eq(-1).children('svg').tooltip(`<strong>${locale.text.tech[t].name}</strong><br>${locale.text.tech[t].description}<br>${player.data().tech[t] >= tech[t].max ? `<strong>Max Level</strong>` : `${player.data().tech[t]} <svg><use href=image/icons.svg#arrow-right /></svg> ${player.data().tech[t] + 1}`}<br><br><strong>Material Cost:</strong>${upgradeCost}<br>${Object.keys(tech[t].requires).length ? `<br><strong>Requires:</strong>` : ``}${techRequires}${settings.debug_tooltips ? '<br>type: ' + t : ''}`);
+			return gui
+		},
+		inv: (i, row) => {
+			let gui = $(`
+				<span style=text-align:right;grid-row:${row};grid-coloumn:1;>${locale.text.item[i].name}${item[i].rare ? ` (rare)` : ``}: </span>
+				<span style=text-align:left;grid-row:${row};grid-coloumn:2;>${minimize(player.data().items[i])}</span>
+			`)
+				.click(e => { if (item[i].recipe && player.hasItems(item[i].recipe)) { player.removeItems(item[i].recipe); player.data().items[i]++ } })
+				.removeAttr('clickable');
+			return gui
+		},
+		update: (scene = game.scene()) => {
+			$('div.inv,div.lab,div.map,div.yrd,div.screenshots').empty();
+			let invRows = 1, yardRows = 0, labRows = 0, mapRows = 0;
+			for (let i in item) {
+				item[i].gui = ui.inv(i, ++invRows);
+				$('div.inv').append(item[i].gui)
+			};
+			$('svg.item-bar rect').attr('width', player.data().totalItems / player.data().maxItems * 100);
+			$('div.item-bar p.label').text(`${minimize(player.data().totalItems)} / ${minimize(player.data().maxItems)}`)
+			for(let i in tech) {
+				tech[i].gui = ui.lab(i, ++labRows);
+				$('div.lab').append(tech[i].gui);
+				tech[i].gui.eq(0)[tech.locked(i) ? 'show' : 'hide']();
+			}
+			for(let i in Ship.generic) {
+				let locked = false;
+				for (let t in Ship.generic[i].requires) {
+					if (tech.locked(t)) locked = true;
+				}
+				Ship.generic[i].gui = ui.yrd(i, ++yardRows);
+				$('div.yrd').append(Ship.generic[i].gui);
+				Ship.generic[i].gui.eq(0)[locked ? 'show' : 'hide']();
+			}
+			$('.marker').hide();
+			scene.waypoints.forEach((wp, i) => {
+				wp.gui(i+1).appendTo('div.map');
+				wp.marker.show();
+			});
+			$('.tooltip').remove(); $('[tooltip-active]').mouseenter();
+			for(let [id, body] of scene.bodies){
+				if (body instanceof CelestialBody) {
+					$('select.move').append(body.option = $(`<option value=${id}>${body.name}</option>`))
+				}
+			};
+			game.screenshots.forEach(s => {
+				$(`<img src=${s} width=256></img>`)
+					.appendTo('#q div.screenshots')
+					.cm(
+						$('<button><svg><use href=image/icons.svg#download /></svg> Download</button>').click(e => {
+							$('<a download=screenshot.png></a>').attr('href', s)[0].click()
+						}),
+						$('<button><svg><use href=image/icons.svg#trash /></svg> Delete</button>').click(e => {
+							confirm().then(result => {
+								game.screenshots.splice(game.screenshots.indexOf(s), 1);
+								ui.update();
+							});
+						}),
+					)
+			});
+			$('input[label][display]').each((i, e) => {
+				let val = e.value;
+				$(`label[for=${$(e).attr('ui-label')}]`).html(`${$(e).attr('label')} (${eval(`\`${$(e).attr('display')}\``)}) `);
+			});
+			$('#settings form.key button').each((i, e) => {
+				let bind = keybind[e.name];
+				$(e).text((bind.ctrl ? 'Ctrl + ' : '') + (bind.alt ? 'Alt + ' : '') + bind.key);
+			});
+			servers.forEach(server => {
+				server.gui.name.text(server.name);
+			});
+			saves.forEach(save => {
+				save.gui.name.text(save.name);
+				save.gui.version.text(game.versions.get(save.version) ? game.versions.get(save.version).text : save.version);
+				save.gui.date.text(save.date.toLocaleString());
+			});
+			Save.cache.forEach(save => {
+				save.gui.name.text(save.data.name);
+				save.gui.version.text(game.versions.get(save.data.version) ? game.versions.get(save.data.version).text : save.data.version);
+				save.gui.date.text(new Date(save.data.date).toLocaleString());
+			});
+			$(':root').css('--font-size',settings.font_size+'px')
+			if(game.mp){
+				$('#esc .quit').text('Disconnect');
+				$('#esc .options').attr('plot', '12.5px,125px,225px,50px,a');
+				$('#esc .quit').attr('plot', '12.5px,187.5px,225px,50px,a');
+				$('#esc .save').hide();
+			}else{
+				$('#esc .quit').text('Exit Game');
+				$('#esc .save').attr('plot', '12.5px,125px,225px,50px,a');
+				$('#esc .options').attr('plot', '12.5px,187.5px,225px,50px,a');
+				$('#esc .quit').attr('plot', '12.5px,250px,225px,50px,a');
+				$('#esc .save').show();
+				
+			}
+			
+			$('[plot]').each((i, e) => {
+				let scale = (settings.gui_scale == 0) ? innerHeight <= 475 ? 0.5 : innerHeight <= 650 ? 0.75 : innerHeight <= 800 ? 1 : 1.25 : Object.assign([1, 0.75, 1, 1.25][settings.gui_scale], { is_from_array: true });
+
+				let plot = $(e).attr('plot').replaceAll(/[\d\.]+(px|em)/g, str => parseFloat(str) * scale + str.slice(-2)).split(',');
+				plot[0][0] == 'c' && !plot[0].startsWith('calc') ?
+					$(e).css('left', `${plot[0].slice(1) ? 'calc(' : ''}calc(50% - calc(${plot[2]}/2))${plot[0].slice(1) ? ` + ${plot[0].slice(1)})` : ''}`)
+					: plot[0][0] == 'r' ? $(e).css('right', plot[0].slice(1))
+						: plot[0][0] == 'l' ? $(e).css('left', plot[0].slice(1))
+							: $(e).css('left', plot[0]);
+				plot[1][0] == 'c' && !plot[1].startsWith('calc') ?
+					$(e).css('top', `${plot[1].slice(1) ? 'calc(' : ''}calc(50% - calc(${plot[3]}/2))${plot[1].slice(1) ? ` + ${plot[1].slice(1)})` : ''}`)
+					: plot[1][0] == 'b' ? $(e).css('bottom', plot[1].slice(1))
+						: plot[1][0] == 't' ? $(e).css('top', plot[1].slice(1))
+							: $(e).css('top', plot[1]);
+				$(e).css({
+					width: plot[2],
+					height: plot[3],
+					position: ['absolute', 'fixed', 'relative', 'sticky'].includes(plot[4]) ? plot[4] : /^(a|s|f|r)$/.test(plot[4]) ? { a: 'absolute', f: 'fixed', r: 'relative', s: 'sticky' }[plot[4]] : 'fixed'
+				});
+			});
+		},
+		lastScene: "#main"
+	});
+
+	//*.new functions ~~new
+	const Star = class extends CelestialBody{
+		constructor({name, position = Vector3.Zero(), radius = 1, color = Color3.Gray(), scene, id}) {
+			super(name ?? 'Unknown Star', id, scene);
+			CreateSphereVertexData({ diameter: radius*2, segments: settings.mesh_quality }).applyToMesh(this);
+			Object.assign(this, {
+				position,
+				light: Object.assign(
+					new PointLight(this.id + ".light", position, scene),
+					{intensity: 1, range: 10000}
+				),
+				material: Object.assign(new StandardMaterial(this.id + ".mat", scene), {
+					//emissiveTexture: new NoiseProceduralTexture(this.id + ".texture", settings.mesh_quality, scene),
+					emissiveColor: color,
+					disableLighting: true
+				}),
+				radius,
+				color,
+				isStar: true,
+				waypoint: new Waypoint({
+					name: this.name,
+					position,
+					color: Color3.FromHexString('#88ddff'),
+					icon: 'planet-ringed',
+					readonly: true
+				}, scene)
+			});
+			//Object.assign(s.material.emissiveTexture, {animationSpeedFactor: 0.1, octaves: 8, persistence:0.8});
+			//s.material.Fragment_Before_FragColor(`color = vec4(vec3(color.xyz),1.0);`);
+		}
+	}
+
+	game.scene.default.center = new Mesh('GAME_DEFAULT_CENTER', game.scene.default);
+	const Planet = class extends CelestialBody {
+		static maxNum = 9;
+		static biomes = new Map([
+			['earthlike', {
+				clouds: false, //true,
+				upperColor: new Color3(0.2, 2.0, 0.2),
+				lowerColor: new Color3(0, 0.2, 1.0),
+				haloColor: new Color3(0, 0.2, 1.0),
+				maxResolution: [64, 256, 1024][settings.render_quality],
+				seed: 0.30,
+				cloudSeed: 0.6,
+				lowerClamp: new Vector2(0.6, 1),
+				groundAlbedo: 1.25,
+				cloudAlbedo: 0,
+				directNoise: false,
+				lowerClip: new Vector2(0, 0),
+				range: new Vector2(0.3, 0.35),
+				icon: 'earth-americas'
+			}],
+			['volcanic', {
+				upperColor: new Color3(0.9, 0.45, 0.45),
+                lowerColor: new Color3(1.0, 0, 0),
+                haloColor: new Color3(1.0, 0, 0.3),
+                seed: 0.30,
+                cloudSeed: 0.60,
+                clouds: false,
+                lowerClamp: new Vector2(0, 1),
+                maxResolution: 256,
+                cloudAlbedo: 0,
+                groundAlbedo: 1.0,
+                directNoise: false,
+                lowerClip: new Vector2(0, 0),
+                range: new Vector2(0.3, 0.4),
+				icon: 'planet-ringed'
+			}],
+			['jungle', {
+				upperColor: new Color3(0.1, 0.3, 0.7),
+                lowerColor: new Color3(0, 1.0, 0.1),
+                haloColor: new Color3(0.5, 1.0, 0.5),
+                seed: 0.40,
+                cloudSeed: 0.70,
+                clouds: false, //true,
+                lowerClamp: new Vector2(0, 1),
+                maxResolution: 512,
+                cloudAlbedo: 1.0,
+                groundAlbedo: 1.1,
+                directNoise: false,
+                lowerClip: new Vector2(0, 0),
+                range: new Vector2(0.2, 0.4),
+				icon: 'earth-americas'
+			}],
+			['ice', {
+				upperColor: new Color3(1.0, 1.0, 1.0),
+                lowerColor: new Color3(0.7, 0.7, 0.9),
+                haloColor: new Color3(1.0, 1.0, 1.0),
+                seed: 0.80,
+                cloudSeed: 0.40,
+                clouds: false, //true,
+                lowerClamp: new Vector2(0, 1),
+                maxResolution: 256,
+                cloudAlbedo: 1.0,
+                groundAlbedo: 1.1,
+                directNoise: false,
+                lowerClip: new Vector2(0, 0),
+                range: new Vector2(0.3, 0.4),
+				icon: 'planet-ringed'
+			}],
+			['desert', {
+				upperColor: new Color3(0.9, 0.30, 0),
+                lowerColor: new Color3(1.0, 0.5, 0.1),
+                haloColor: new Color3(1.0, 0.5, 0.1),
+                seed: 0.18,
+                cloudSeed: 0.60,
+                clouds: false,
+                lowerClamp: new Vector2(0.3, 1),
+                maxResolution: 512,
+                cloudAlbedo: 1.0,
+                groundAlbedo: 1.0,
+                directNoise: false,
+                lowerClip: new Vector2(0, 0),
+                range: new Vector2(0.3, 0.4),
+				icon: 'planet-ringed'
+			}],
+			['islands', {
+				upperColor: new Color3(0.4, 2.0, 0.4),
+                lowerColor: new Color3(0, 0.2, 2.0),
+                haloColor: new Color3(0, 0.2, 2.0),
+                seed: 0.15,
+                cloudSeed: 0.60,
+                clouds: false, //true,
+                lowerClamp: new Vector2(0.6, 1),
+                maxResolution: 512,
+                cloudAlbedo: 1.0,
+                groundAlbedo: 1.2,
+                directNoise: false,
+                lowerClip: new Vector2(0, 0),
+                range: new Vector2(0.2, 0.3),
+				icon: 'earty-oceania'
+			}],
+			['moon', {
+				upperColor: new Color3(2.0, 1.0, 0),
+				lowerColor: new Color3(0, 0.2, 1.0),
+				haloColor: new Color3(0, 0.2, 1.0),
+				cloudSeed: 0.6,
+				lowerClamp: new Vector2(0.6, 1),
+				cloudAlbedo: 0.9,
+				lowerClip: new Vector2(0, 0),
+				range: new Vector2(0.3, 0.35),
+				haloColor: new Color3(0, 0, 0),
+                seed: 0.5,
+                clouds: false,
+                groundAlbedo: 0.7,
+                directNoise: true,
+                lowerClip: new Vector2(0.5, 0.9),
+				icon: 'planet-ringed'
+			}]
+		]);
+		get power(){
+			//return this.fleet.reduce((total, ship) => total + ship.power, 0) || 0
+			return 1
+		}
+		constructor({name, position = Vector3.Zero(), biome = 'earthlike', radius = 1, owner = null, fleet = [], rewards = {}, scene = game.scene(), id}){
+			super(name ?? 'Unknown Planet', id, scene);
+			CreateSphereVertexData({ diameter: radius * 2, segments: settings.mesh_quality }).applyToMesh(this);
+			Object.assign(this, {
+				owner, radius, rewards, biome, position,
+				material: Planet.biomes.has(biome) ? new CelestialBodyMaterial(Planet.biomes.get(biome)) : new StandardMaterial('mat', scene)
+			});
+			this.fleetLocation.position = rand.cords(rand.int(radius + 5, radius * 1.2), true);
+			this.waypoint = new Waypoint({
+				name: this.name,
+				position,
+				color: Color3.FromHexString('#88ddff'),
+				icon: Planet.biomes.has(biome) ? Planet.biomes.get(biome).icon : 'planet-ringed',
+				readonly: true
+			}, scene);
+			for(let shipOrType of fleet){
+				if(shipOrType instanceof Ship){
+					this.fleet.push(shipOrType);
+					shipOrType.addToScene(scene);
+				}else{
+					let ship = new Ship(shipOrType, this);
+					ship.addToScene(scene);
+					ship.position = rand.cords(rand.int(0, this.power));
+				}
+			}
+		}
+	}
+	const Station = class extends CelestialBody{
+		constructor({name = 'Station', id = rand.hex(32)}, scene){
+			super(name, id, scene);
+		}
+	}
+	const Level = class extends Scene {
+		static names = ["Crash Site", "Abrigato", "Kerali", "Kaltez", "Suzum", "Vespa", "Coruscare", "Vulca", "Jaeger", "Kashyyyk", "Outpost42", "Victoria", "Gesht", "Sanctuary", "Snowmass", "Ja", "Keeg", "Haemeiguli", "Borebalae", "Albataetarius", "Hataerius", "Achernaiphoros", "Antadrophei", "Hoemeirai", "Antabalis", "Hoereo", "Pazadam", "Equidor", "Pax", "Xena", "Titan", "Oturn", "Thuamia", "Heuthea", "Ditharus", "Muxater", "Trukovis", "Bichotune", "Etis", "Leorus", "Aphus", "Harophos", "Athena", "Hades", "Icarus", "Ureus", "Xentos Prime", "Ketlak", "Aerox", "Thryox", "Stratus", "Nox", "Sanctum", "Pastūra", "Tinctus", "Morbus", "Neos", "Nomen", "Numerus", "Pax", "Fornax", "Skorda", "Alli", "Resurs", "Home"];
+		static size = 5000;
+		static total = 0;
+		getSave(){
+			return this._save
+		}
+		constructor(nameOrData, location = new Vector2(rand.int(-25, 25), rand.int(-25, 25)), hasStar = true, onready = () => null, save = saves.get(saves.sel)) {
+			(async () => {
+				super(game.engine);
+				const id = rand.hex(32);
+				this.isLoaded = typeof nameOrData == 'object';
+				Object.assign(this, this.isLoaded ? {
+					...nameOrData,
+					gl: Object.assign(new GlowLayer('glowLayer#' + id, this), { intensity: 0.9 }),
+					hl: new HighlightLayer('highlight#' + id, this),
+					skybox: Mesh.CreateBox('skybox', Level.size * 2, this),
+					bodies: new Map(),
+					location: Vector2.FromArray(nameOrData.location),
+					onReady: onready,
+					_save: save,
+					probe: new ReflectionProbe('probe#' + id, 256, this),
+					activeCamera: player.cam,
+					clearColor: new Color3(0.8, 0.75, 0.85),
+					genericEntities: {},
+					waypoints: []
+				} : {
+					id: id,
+					name: nameOrData,
+					gl: Object.assign(new GlowLayer('glowLayer#' + id, this), { intensity: 0.9 }),
+					hl: new HighlightLayer('highlight#' + id, this),
+					skybox: Mesh.CreateBox('skybox', Level.size * 2, this),
+					location: location,
+					hasStar: hasStar,
+					difficulty: Vector2.Distance(location, Vector2.Zero()),
+					planetNum: hasStar ? rand.int(1, Planet.maxNum) : 0,
+					probe: new ReflectionProbe('probe#' + id, 256, this),
+					clearColor: new Color3(0.8, 0.75, 0.85),
+					activeCamera: player.cam,
+					bodies: new Map(),
+					onReady: onready,
+					_save: save,
+					genericEntities: {},
+					waypoints: []
+				});
+				if(!this.isLoaded){
+					this.center = hasStar ? new Star({
+						name: nameOrData,
+						position: Vector3.Zero(),
+						radius: rand.int(300, 500),
+						color: new Color3(Math.random() ** 3 / 2 + rand.float(0.3, 0.4), Math.random() ** 3 / 2 + rand.float(0.3, 0.4), Math.random() ** 3 / 2 + rand.float(0.3, 0.4)),
+						scene: this
+					}) : new CelestialBody(nameOrData, undefined, this);
+				}
+				this.addCamera(player.cam);
+
+				this.skybox.infiniteDistance = true;
+				this.skybox.isPickable = false;
+				this.skybox.material = Object.assign(new StandardMaterial('skybox.mat', this), {
+					backFaceCulling: false,
+					disableLighting: true,
+					reflectionTexture: CubeTexture.CreateFromImages(Array(6).fill('image/skybox.jpg'), this)
+				});
+				this.skybox.material.reflectionTexture.coordinatesMode = 5;
+				for(let i in Ship.generic){
+					let container = this.genericEntities[i] = await SceneLoader.LoadAssetContainerAsync('', Ship.generic[i].model, this);
+					Object.assign(container.meshes[0], {
+						rotationQuaternion: null,
+						material: Object.assign(container.materials[0], {
+							realTimeFiltering: true,
+							realTimeFilteringQuality: [2, 8, 32][+settings.render_quality],
+							reflectionTexture: this.probe.cubeTexture,
+							roughness: 0,
+							metallic: 1
+						}),
+						position: Vector3.Zero(),
+						isVisible: false,
+						isPickable: false
+					});
+					this.probe.renderList.push(container.meshes[1]);
+				}
+				if(!this.isLoaded){
+					let nameMode = rand.bool, names = rand.bool ? greek.slice(0, this.planetNum) : range(1, this.planetNum + 1);
+					for (let i in names) {
+						let name = nameMode ? names[i] + ' ' + this.name : this.name + ' ' + names[i],
+						radius = rand.int(25, 50);
+						let planet = new Planet({
+							name: rand.int(0, 9999) == 0 ? 'Jude' : name,
+							position: rand.cords(rand.int((this.center.radius + radius) * 1.5, Level.size), true),
+							radius,
+							biome: ['earthlike', 'volcanic', 'jungle', 'ice', 'desert', 'moon'][rand.int(0, 5)],
+							fleet: gen.enemies((this.difficulty + 1) * (i + 1) * worldgen.difficulty),
+							rewards: gen.items(1000 * i * (2 - worldgen.difficulty)),
+							scene: this,
+						});
+					}
+				}
+				this.registerBeforeRender(()=>{
+        			let ratio = this.getAnimationRatio();
+					for(let [id, body] of this.bodies){
+						if(body instanceof Planet){
+							body.rotation.y += 0.0001 * ratio * body.material.rotationFactor;
+							body.material.setMatrix("rotation", Matrix.RotationY(body.matrixAngle));
+							body.matrixAngle -= 0.0004 * ratio;
+							body.material.setVector3("options", new Vector3(body.material.generationOptions.clouds, body.material.generationOptions.groundAlbedo, body.material.generationOptions.cloudAlbedo))
+						}
+					}
+				});
+				this.onReady(this);
+			})();
+		}
+	}
+	const Save = class {
+		static cache = new Map();
+		static upgrades = new Map([
+			['infdev_11', data => ({...data, version: 'alpha_1.0.0'})],
+			['infdev_12', data => ({...data, version: 'alpha_1.0.0'})],
+		]);
+		static upgrade(data){
+			while(game.version != data.version && Save.upgrades.has(data.version)){
+				data = Save.upgrades.get(data.version)(data);
+			}
+			return data;
+		}
+		static Cache = class {
+			constructor(data){
+				this.data = data;
+				this.gui = new Save.GUI(this);
+				Save.cache.set(this.data.id, this);
+			}
+			load(){
+				if(game.version != this.data.version){
+					this.data = Save.upgrade(this.data);
+					ui.update();
+				}
+				new Save(JSON.stringify(this.data));
+			}
+		};
+		static GUI = function(data){
+			let isCache = data instanceof Save.Cache ? true : false, saveData = isCache ? data.data : data;
+			const gui = $(`<li ofn bg bw style=align-items:center;height:3em;></li>`);
+			gui.delete = $(`<p style=position:absolute;left:10%><svg><use href=image/icons.svg#trash /></svg></p>`).appendTo(gui);
+			gui.download = $(`<p style=position:absolute;left:15%><svg><use href=image/icons.svg#download /></svg></p>`).appendTo(gui);
+			gui.play = $(`<p style=position:absolute;left:20%><svg><use href=image/icons.svg#play /></svg></p>`).appendTo(gui);
+			gui.edit = $(`<p style=position:absolute;left:25%><svg><use href=image/icons.svg#pencil /></svg></p>`).appendTo(gui);
+			gui.name = $(`<p style=position:absolute;left:30%>${saveData.name}</p>`).appendTo(gui);
+			gui.version = $(`<p style=position:absolute;left:55%>${game.versions.get(saveData.version) ? game.versions.get(saveData.version).text : saveData.version}</p>`).appendTo(gui);
+			gui.date = $(`<p style=position:absolute;left:65%>${new Date(saveData.date).toLocaleString()}</p>`).appendTo(gui);
+			$('<p> </p>').appendTo(gui);
+				
+			gui
+			.attr('clickable', '')
+			.click(e => { $('.selected').removeClass('selected'); saves.sel = saveData.id; gui.addClass('selected') })
+			.dblclick(e => isCache ? data.load() : saveData.play());
+			if(!game.mp) gui.prependTo('#load');
+			gui.delete.click(e => {
+				confirm().then(() => {
+					gui.remove();
+					db.transaction('saves', 'readwrite').objectStore('saves').delete(saveData.id);
+					(isCache ? Save.cache : saves).delete(saveData.id);
+					
+				});
+			});
+			gui.download.click(e => download(JSON.stringify(isCache ? saveData : saveData.serialize()), (saveData.name || 'save') + '.json'));
+			gui.play.click(e => isCache ? data.load() : saveData.play());
+			gui.edit.click(e => {
+				modal([{name: 'name', text: 'New name', value: saveData.name}], {Cancel: false, Save: true}).then(result => {
+				if(result.result){
+						saveData.name = result.name;
+						ui.update();
+					}
+				});
+			});
+			return gui;
+		};
+		constructor(nameOrData) {
+			try {
+				if(isJSON(nameOrData)){
+					let saveData = JSON.parse(nameOrData);
+					if(saves.has(saveData.id)){
+						saves.get(saveData.id).gui.remove();
+						saves.delete(saveData.id);
+					}
+					if(Save.cache.has(saveData.id)){
+						Save.cache.get(saveData.id).gui.remove();
+						Save.cache.delete(saveData.id);
+					}
+					Object.assign(this, {
+						id: saveData.id,
+						name: saveData.name,
+						date: new Date(saveData.date),
+						version: saveData.version,
+						difficulty: saveData.difficulty,
+						levels: {},
+						entities: new Map(),
+						systems: saveData.systems,
+						currentLevel: Vector2.FromArray(saveData.currentLevel),
+						playerData: {},
+					});
+					for(let entityData of saveData.entities){
+						switch(entityData.type){
+							case 'ship':
+								new Ship(entityData,  entityData.owner == player.id ? player : null, this);
+								break;
+							default:
+								new Entity(this);
+						}
+					}
+					for(let id in saveData.playerData){
+						let data = {...saveData.playerData[id], id};
+						this.playerData[id] = new PlayerData({
+							position: Vector3.FromArray(data.position),
+							rotation: Vector3.FromArray(data.rotation),
+							fleet: data.fleet.map(id => this.entities.get(id)),
+							id,
+							xp: data.xp,
+							xpPoints: data.xpPoints,
+							tech: data.tech
+						}, game.scene());
+					}
+					for(let location in saveData.levels){
+						this.levels[location] = new Level(saveData.levels[location], null, null, level => {
+							for(let waypoint of level.waypoints){
+								new Waypoint({
+									id: waypoint.id,
+									name: waypoint.name,
+									color: Color3.FromArray(waypoint.color),
+									position: Vector3.FromArray(waypoint)
+								});
+							}
+							for(let id in saveData.levels[location].bodies){
+								let bodyData = saveData.levels[location].bodies[id], body = null;
+								switch(bodyData.type){
+									case 'star':
+										new Star({
+											position: Vector3.FromArray(bodyData.position),
+											fleet: bodyData.fleet.map(id => this.entities.get(id)),
+											color: Color3.FromArray(bodyData.color),
+											scene: level
+										}.copyFrom(bodyData, ['name', 'radius', 'id']));
+									break;
+									case 'planet':
+										
+										new Planet({
+											position: Vector3.FromArray(bodyData.position),
+											fleet: bodyData.fleet.map(id => this.entities.get(id)),
+											scene: level
+										}.copyFrom(bodyData, ['name','radius','id','biome','owner','rewards']));
+									break;
+									default:
+										new CelestialBody(bodyData.name, bodyData.id, level);
+										//TODO: Change Star/Planet constructors to use standerdized data
+								}
+							}
+						}, this);
+					}
+				}else{
+					Object.assign(this, {
+						id: rand.hex(16),
+						name: nameOrData,
+						date: new Date(),
+						version: game.version,
+						difficulty: 1,
+						levels: {},
+						systems: {},
+						entities: new Map(),
+						currentLevel: Vector2.Zero(),
+						playerData: {[player.id]: new PlayerData({id: player.id, items: gen.items(5000), position: new Vector3(0, 0, -1000).add(rand.cords(50, true))}, game.scene())}
+					});
+					for (let i in tech) {
+						this.playerData[player.id].tech[i] = 0;
+					}
+					this.systems[[0,0]] = Level.names[0];
+					Level.names.slice(1).forEach(name => {
+						let x = rand.int(-25, 25), y = rand.int(-25, 25);
+						if(x && y){
+							this.systems[[x,y]] = name;
+						}
+					});
+					this.levels[[0,0]] = new Level(Level.names[0], Vector2.Zero(), true, lvl => {
+						this.play();
+						let ship = new Ship('frigate', player, this);
+						ship.addToScene(lvl);
+					}, this);
+				}
+				this.gui = new Save.GUI(this);
+				saves.set(this.id, this);
+				
+			} catch (err) { console.error(err.stack.split('\n').join('<br>')) }
+		}
+		play(){
+			if(this.version == game.version){
+				$('#load').hide();
+				game.canvas.show().focus();
+				game.canvas[0].requestPointerLock();
+				$('#hud').show();
+				game.engine.resize();
+				saves.sel = this.id;
+				game.isPaused = false;
+				player.cam.target = player.data().position;
+			}else{
+				alert('That save is in compatible with the current game version');
+			}
+		}
+		serialize(){
+			let data = {
+				date: this.date.toJSON(),
+				levels: {},
+				entities: [],
+				currentLevel: this.currentLevel instanceof Vector2 ? this.currentLevel.asArray() : this.currentLevel,
+				playerData: {}
+			}.copyFrom(this, ['systems', 'difficulty', 'version', 'name', 'id']);
+			for(let entity of this.entities.values()){
+				if(!entity instanceof Entity){
+					console.warn(`entity #${entity?.id} not saved: invalid type`);
+				}else{
+					let entityData = {
+						position: entity.position.asArray().map(num => +num.toFixed(3)),
+						rotation: entity.rotation.asArray().map(num => +num.toFixed(3)),
+						name: entity.name,
+						id: entity.id
+					};
+					switch(entity.constructor.name){
+						case 'Ship':
+						Object.assign(entityData, {
+							type: 'ship',
+							shipType: entity.type,
+							owner: player.data().fleet.includes(entity) ? player.id : null, 
+							storage: entity.storage.serialize(),
+							reload: +entity.reload.toFixed(3),
+							hp: +entity.hp.toFixed(3),
+						}).copyFrom(entity, ['damage', 'level', 'power']);
+						break;
+						default:
+						Object.assign(entityData, {
+							type: null,
+							hp: 0,
+							owner: null
+						});
+					}
+					data.entities.push(entityData);
+				}
+			};
+			for(let i in this.levels){
+				if(!/(-?)(\d+),(-?)(\d+)/.test(i)){
+					console.warn(`level ${i} in save ${this.id} not serialized: invalid key`);
+				}else if(!this.levels[i] instanceof Level){
+					console.warn(`level ${i} in save ${this.id} not serialized: invalid type (not a level)`);
+				}else{
+					data.levels[i] = {
+						bodies: {},
+						name: this.levels[i].name,
+						location: this.levels[i].location.asArray().map(num => +num.toFixed(3)),
+						planetNum: this.levels[i].planetNum,
+						hasStar: this.levels[i].hasStar
+					};
+					for(let [id, body] of this.levels[i].bodies){
+						if(!body instanceof CelestialBody){
+							console.warn(`body #${body?.id} not saved: invalid type`);
+						}else{
+							let bodyData = data.levels[i].bodies[id] = {
+								position: body.position.asArray().map(num => +num.toFixed(3)),
+								name: body.name,
+								id: body.id,
+								fleetLocation: body.fleetLocation.position.asArray().map(num => +num.toFixed(3)),
+								fleet: body.fleet.map(f => f.id),
+								owner: body.owner
+							};
+							switch(body.constructor.name){
+								case 'Star':
+								Object.assign(bodyData, {
+									type: 'star',
+									radius: body.radius,
+									color: body.material.emissiveColor.asArray().map(num => +num.toFixed(3)),
+								});
+								break;
+								case 'Planet':
+								Object.assign(bodyData, {
+									type: 'planet',
+									biome: body.biome,
+									radius: body.radius
+								});
+								break;
+								default: bodyData.type = null;
+							}
+						}
+					};
+				}
+			}
+			for(let id in this.playerData){
+				let playerData = this.playerData[id];
+				data.playerData[id] = {
+					position: playerData.position.asArray().map(num => +num.toFixed(3)),
+					rotation: playerData.rotation.asArray().map(num => +num.toFixed(3)),
+					fleet: playerData.fleet.map(s => s.id)
+				}.copyFrom(playerData, ['tech', 'items', 'xp', 'xpPoints']);
+			}
+			return data;
+		}
+		saveToDB(){
+			return new Promise((result, reject) => {
+				let transaction = db.transaction('saves','readwrite').objectStore('saves').put(this.serialize(), this.id);
+				transaction.onsuccess = result;
+				transaction.onerror = reject;
+			});
+			
+		}
+	}
+	const Server = class {
+		static dialog(server){
+			modal([
+				{name: 'name', text: 'Display name', value: server instanceof Server ? server.name : null},
+				{name: 'url', text: 'Server URL or IP Address', value: server instanceof Server ? server.url : null}
+			], {Cancel: false, Save: true}).then(result => {
+				if(result.result){
+					let transaction = db.transaction('servers','readwrite').objectStore('servers');
+					if(server instanceof Server){
+						transaction.put(result.name, result.url);
+						server.name = result.name;
+						if(server.url != result.url){
+							transaction.delete(server.url);
+							server.url = result.url;
+						}
+					}else{
+						if(servers.has(result.url)){
+							alert('A server with that URL already exists.');
+						}else{
+							new Server(result.url, result.name);
+							
+						}
+					}
+					ui.update();
+				}
+			});
+			
+		}
+		constructor(url, name){
+			Object.assign(this, {
+				url,
+				name,
+				kickMessage: null,
+				socket: null, 
+				gui: $(`<li ofn bg style=align-items:center;height:3em></li>`)
+			});
+			db.transaction('servers','readwrite').objectStore('servers').put(name, url);
+			this.socket = io(this.url, {reconnection: false, autoConnect: false, auth: {token: cookie.token, session: cookie.session}});
+			this.socket.on('connect', socket => {
+				$('#connect').hide();
+				game.canvas.show().focus();
+				$('#mp_message,#hud').show();
+				game.engine.resize();
+				game.canvas[0].requestPointerLock();
+				$('#tablist p.info').html(`${this.url}<br>${this.pingData.version.text}<br>${this.pingData.message}<br>`);
+			});
+			this.socket.on('connect_error', err => {
+				$('#connect p').text((err.message.startsWith('Connection refused') ? '' : 'Connection Error: ') + err.message);
+				$('#connect button').text('Back');
+			});
+			this.socket.on('connect_failed', err => {
+				$('#connect p').text('Connection failed: ' + err.message);
+				$('#connect button').text('Back');
+			});
+			this.socket.on('packet', packet => {
+				$('#connect p').text('[Server] ' + (packet instanceof Array ? `Array (${packet.length})<br>` + packet.join('<br>') : packet));
+			});
+			this.socket.on('playerlist', list => {
+				$('#tablist p.players').html(list.join('<br>'));
+			});
+			this.socket.on('kick', message => {
+				this.kickMessage = 'Kicked from server: ' + message;
+			});
+			this.socket.on('chat', message => {
+				game.chat(message);
+			});
+			this.socket.on('disconnect', reason => {
+			    let message = 
+				this.kickMessage ??
+			    (reason == 'io server disconnect' ? 'Disconnected by server' :
+			    reason == 'io client disconnect' ? 'Client disconnected' :
+			    reason == 'ping timeout' || reason == 'transport error' ? 'Connection timed out' :
+			    reason == 'transport close' ? 'Lost Connection' :
+			    reason);
+				$('#connect p').text(message);
+				this.kickMessage = null;
+				$('#connect button').text('Back');
+				$('[ingame]').hide();
+				$(reason == 'io client disconnect' ? '#load' : '#connect').show();
+			});
+			this.gui.delete = $(`<p style=position:absolute;left:15%><svg><use href=image/icons.svg#trash /></svg></p>`).appendTo(this.gui);
+			this.gui.play = $(`<p style=position:absolute;left:20%><svg><use href=image/icons.svg#play /></svg></p>`).appendTo(this.gui);
+			this.gui.edit = $(`<p style=position:absolute;left:25%><svg><use href=image/icons.svg#pencil /></svg></p>`).appendTo(this.gui);
+			this.gui.name = $(`<p style=position:absolute;left:30%>${this.name}</p>`).appendTo(this.gui);
+			this.gui.info = $(`<p style=position:absolute;left:75%></p>`).appendTo(this.gui);
+			$('<p> </p>').appendTo(this.gui);
+			this.gui
+				.attr('clickable', true)
+				.click(e => {
+					$('.selected').removeClass('selected');
+					this.gui.addClass('selected');
+					servers.sel = this.url;
+				})
+				.dblclick(e => this.connect())
+				.prependTo('#load');
+			this.gui.delete.click(e => {
+				confirm().then(() => {
+					this.gui.remove();
+					servers.delete(this.url);
+					db.transaction('servers', 'readwrite').objectStore('servers').delete(this.url);
+				});
+			});
+			this.gui.play.click(e => this.connect());
+			this.gui.edit.click(e => Server.dialog(this));
+			servers.set(this.url, this);
+		}
+		connect(){
+			if(this?.socket?.connected){
+				throw new ReferenceError(`Can't connect to server: already connected`);
+			}
+			$('#load').hide();
+			$('#connect').show();
+			$('#connect p').text('Connecting...');
+			$('#connect button').text('Back');
+			this.socket.connect();
+		}
+		disconnect(showMessage){
+			if(this.socket.connected){
+				this.socket.disconnect(true);
+			}
+			servers.sel = null;
+			servers.forEach(server => server.ping());
+		}
+		ping(){
+			this.gui.info
+			.html('<svg><use href=image/icons.svg#arrows-rotate /></svg>')
+			.css('animation', '2s linear infinite rotate');
+			let beforeTime = Date.now();
+			let url = /.+:(\d){1,5}/.test(this.url) ? this.url : this.url + ':1123';
+			$.get(`${(/http(s?):\/\//.test(url) ? url : 'https://' + url)}/ping`)
+			.done(data => {
+				if(isJSON(data)){
+					this.pingData = JSON.parse(data);
+					this.gui.info
+					.text(`${((Date.now() - beforeTime)/2).toFixed()}ms ${this.pingData.currentPlayers}/${this.pingData.maxPlayers}`)
+					.tooltip(`${this.url}<br><br>${this.pingData.version.text}<br><br>${this.pingData.message}`)
+				}else{
+					this.gui.info
+					.html('<svg><use href=image/icons.svg#xmark /></svg>')
+					.tooltip(`Invalid response`);
+				}
+			})
+			.fail(data => {
+				this.gui.info
+				.html('<svg><use href=image/icons.svg#xmark /></svg>')
+				.tooltip(`Can't connect to server`);
+			})
+			.always(data => {
+				this.gui.info.css('animation', 'unset');
+			})
+		}
+	};
+
+	oncontextmenu = e => { $('.cm').not(":last").remove() };
+	onclick = e => { $('.cm').remove() };
+
+	//default data
+	Object.assign(item, {
+		metal: {rare: false, value: 1 },
+		minerals: {rare: false, value: 2 },
+		fuel: {rare: false, value: 4 },
+		ancient_tech: {rare: true, drop: 0.1, value: 1000 },
+		code_snippets: {rare: true, drop: 0.1, value: 1000 }
+	});
+	Object.assign(tech, {
+		armor: { recipe: { metal: 1000 }, xp: 1, scale: 1.5, max: 25, requires: {}},
+		laser: { recipe: { minerals: 1000 }, xp: 1, scale: 1.5, max: 25, requires: {}},
+		reload: { recipe: { minerals: 4000, minerals: 1500 }, xp: 1, scale: 1.2, max: 10, requires: {}},
+		thrust: { recipe: { fuel: 1000 }, xp: 1, scale: 1.5, max: 25, requires: {}},
+		energy: { recipe: { fuel: 5000, minerals: 1000 }, xp: 1, scale: 1.5, max: 25, requires: {}},
+		shields: { recipe: { metal: 2500, minerals: 5000 }, xp: 1, scale: 1.5, max: 10, requires: { armor: 5 }},
+		missle: { recipe: { metal: 10000, minerals: 1000, fuel: 5000 }, xp: 1, scale: 1.5, max: 25, requires: { laser: 5 }},
+		regen: { recipe: { metal: 50000, minerals: 10000, fuel: 10000 }, xp: 1, scale: 1.5, max: 25, requires: { reload: 5, armor: 15 }},
+		build: { recipe: { metal: 100000 }, xp: 2, scale: 1.5, max: 50, requires: { armor: 10, thrust: 10, reload: 10 }},
+		salvage: { recipe: { metal: 250000, minerals: 50000, fuel: 100000 }, xp: 5, scale: 1.25, max: 25, requires: { build: 5 }}
+	});
+
+	//Load saves and servers into the game (from the IndexedDB)
+	db.transaction('saves', 'readonly').objectStore('saves').getAll().onsuccess = e => {
+		e.target.result.forEach(save => {
+			new Save.Cache(save);
+		});
+	};
+	db.transaction('servers', 'readonly').objectStore('servers').getAllKeys().onsuccess = e => {
+		e.target.result.forEach(key => {
+			db.transaction('servers', 'readonly').objectStore('servers').get(key).onsuccess = e => {
+				let server = new Server(key, e.target.result);
+			}
+		});
+	};
+
+	//Event Listeners (UI transitions, creating saves, etc.)
+	$("#main .sp").click(e => {
+		game.mp = false;
+		$("#load li").detach();
+		saves.forEach(save => save.gui.prependTo('#load'));
+		Save.cache.forEach(save => save.gui.prependTo('#load'));
+		$("#main").hide();
+		$('#load button.upload').html(`<svg><use href=image/icons.svg#upload /></svg> ${locale.text.menu.upload}`);
+		$("#load").show()
+	});
+	$("#main .mp").click(e => {
+		game.mp = true;
+		$('#main').hide();
+		$('#load button.refresh').html(`<svg><use href=image/icons.svg#arrows-rotate /></svg> ${locale.text.menu.refresh}`);
+		$('#load').show();
+		$("#load li").detach();
+		servers.forEach(server => {
+			server.gui.prependTo('#load');
+			server.ping();
+		});
+	});
+	$("#main .options").click(e => {
+		ui.LastScene = '#main';
+		$("#settings").show();
+		ui.update();
+	});
+	$("#load .back").click(e => {
+		$("#load").hide();
+		$("#main").show()
+	});
+	$("#load .new").click(e => {
+		game.mp ? Server.dialog() : $('#save')[0].showModal();;
+	});
+	$('#load button.upload.refresh').click(e => {
+		if(game.mp){
+			servers.forEach(server => server.ping());
+		}else{
+			upload('.json').then(file => file[0].text()).then(text => {
+				if(isJSON(text)){
+					new Save(JSON.parse(text));
+				}else{
+					alert(`Can't load save: not JSON.`);
+				}
+			});
+		}
+	});
+	$('#connect button.back').click(e => {
+		$('#load').show();
+		$('#connect').hide();
+	});
+	$('#save button.back').click(e => {
+		$('#save')[0].close();
+	});
+	$('#save .new').click(e => {
+		$('#save')[0].close();
+		let save = new Save($('#save .name').val());
+	});
+	$('#esc .resume').click(e => {
+		$('#esc').hide();
+		game.canvas.focus()[0].requestPointerLock();
+		game.isPaused = false;
+	});
+	$('#esc .save').click(e => {
+		if(saves.get(saves.sel) instanceof Save){
+			$('#esc .save').text('Saving...');
+			saves.get(saves.sel).saveToDB()
+			.then(e => {
+				game.chat('Game Saved.');
+				$('#esc .save').text('Save Game');
+			})
+			.catch(e => {
+				game.chat('Failed to save game: ' + err);
+				$('#esc .save').text('Save Game');
+			});
+		}else{throw 'Save Error: you must have a valid save selected.'}
+	});
+	$("#esc .options").click(e => {
+		ui.LastScene = '#esc';
+		$("#esc").hide();
+		$("#settings").show();
+	});
+	$("#esc .quit").click(e => {
+		game.isPaused = true;
+		$('[ingame]').hide();
+		if(game.mp){
+			servers.get(servers.sel).disconnect();
+		}else{
+			game.currentLevel = Vector2.Zero();
+			saves.sel = null;
+			$('#main').show();
+		}
+	});
+	$(".nav button.inv").click(e => { $('#q>:not(.nav)').hide(); $('div.inv,div.item-bar').show() });
+	$('.nav button.map').click(e => { $('#q>:not(.nav)').hide(); $('.map').show() });
+	$(".nav button.screenshots").click(e => { $("#q>:not(.nav)").hide(); $("div.screenshots").show() });
+	$('.nav button.warp').click(e => {$('#q>:not(.nav)').hide(); $('div.warp').show()});
+	$(".nav button.yrd").click(e => { $("#e>:not(.nav)").hide(); $("div.yrd").show() });
+	$(".nav button.lab").click(e => { $("#e>:not(.nav)").hide(); $("div.lab").show() });
+	$(".nav button.trade").click(e => { $("#e>:not(.nav)").hide(); $("div.trade").show() });
+	$('button.map.new').click(e => {
+		Waypoint.dialog();
+	});
+	$("#settings button.gen").click(e => { game.saveSettings(); $("#settings form,#settings ul").hide(); $("#settings form.gen").show() });
+	$("#settings button.key").click(e => { game.saveSettings(); $("#settings form,#settings ul").hide(); $("#settings form.key").show() });
+	$("#settings button.mod").click(e => {
+		game.saveSettings();
+		$('#settings form,#settings ul').hide();
+		$('#settings ul.mod').show().empty().append(
+			$('<h2 style=text-align:center>Mods</h2>'),
+			$('<button plot=r15px,b15px,100px,35px,a><svg><use href=image/icons.svg#trash /></svg>&nbsp;Reset</button>').click(e => {
+				db.transaction('mods', 'readwrite').objectStore('mods').clear().onsuccess = e => {
+					location.reload();
+				}
+			}),
+			$(`<button plot=r130px,b15px,100px,35px,a><svg><use href=image/icons.svg#plus /></svg></i>&nbsp;${locale.text.menu.upload}</button>`).click(e => {
+				//upload('.js').then(files => [...files].forEach(file => file.text().then(mod => game.loadMod(mod))));
+				alert('Mods are not supported.');
+			})
+		);
+		ui.update()
+	});
+	$('#settings button.back').click(e => {
+		game.saveSettings();
+		$('#settings').hide();
+		$(ui.LastScene).show();
+		ui.update();
+	});
+	$("#q div.warp button.warp").click(e => { warp.start(new Vector2(+$("input.warp.x").val(), +$("input.warp.y").val())); $("#q").toggle(); warp.end() });
+	$('#hud_ship .upgrade').click(e => {
+		let s = player.data().fleet[player.data().fleet.sel], g = Ship.generic[player.data().fleet[player.data().fleet.sel].type], upCost = '';
+		for (let m in g.recipe[s.level + 1]) { upCost += `<br>${locale.text.item[m].name}: ${minimize(player.data().items[m])}/${minimize(g.recipe[s.level + 1][m])}` }
+		if (s.level < g.recipe.length - 1 && player.hasItems(g.recipe[s.level + 1])) { player.removeItems(g.recipe[s.level + 1]); s.level++ }
+		ui.update();
+	}).tooltip(e => {
+		if (player.data().fleet.sel > -1) {
+			let s = player.data().fleet[player.data().fleet.sel], g = Ship.generic[player.data().fleet[player.data().fleet.sel].type], upCost = '';
+			for (let m in g.recipe[s.level + 1]) { upCost += `<br>${locale.text.item[m].name}: ${minimize(player.data().items[m])}/${minimize(g.recipe[s.level + 1][m])}` }
+			return s.level == g.recipe.length - 1 ? `<p style=padding:10px>Max Level</p>` : `${s.level} <svg><use href=image/icons.svg#arrow-right /></svg> ${s.level + 1}<br><br><strong>Upgrade Cost:</strong>${upCost}`;
+		}
+	});
+	$('[label]').each((i, e) => {
+		let val = e.value;
+		$(e).attr('ui-label', rand.hex(32))
+		$(`<label>${$(e).attr('label')} ${$(e).attr('display') && e.localName == 'input' ? eval(`\`(${$(e).attr('display')})\``) : ''} </label>`).attr('for', $(e).attr('ui-label')).insertBefore($(e));
+	});
+	$('input[label][display]').mousemove(e => ui.update());
+	$('#settings form.gen input').change(e => ui.update());
+	$('#settings form.gen select[name=locale]').change(e => {
+		let lang = e.target.value;
+		locale.isCached(lang).then(is => {
+			if(is) locale.set(lang);
+		});
+	});
+	$('html').keydown(e => {
+		switch (e.key) {
+			case 'F8': e.preventDefault(); open(web('bugs/new'), 'target=_blank'); break;
+			case 'b' : if(e.ctrlKey) game.strobe(100); break;
+			case 't': if(e.altKey){
+				e.preventDefault();
+				prompt('Password').then(passkey => {
+				let token = $.ajax(web('api/dev_auth'), {data:{passkey}, async: false}).responseText;
+				document.cookie = 'token=' + token;
+				location.reload();
+			})} break;
+		}
+	});
+	$('#cli').keydown(e => {
+		let c = game.cli;
+		if (c.line == 0) c.currentInput = $("#cli").val();
+		switch (e.key){
+			case 'Escape': game.toggleChat();break;
+			case "ArrowUp": if (c.line > -c.prev.length) $("#cli").val(c.prev.at(--c.line)); if (c.line == -c.prev.length) if (++c.counter == 69) $("#cli").val('nice'); break;
+			case "ArrowDown": c.counter = 0; if (c.line < 0) ++c.line == 0 ? $("#cli").val(c.currentInput) : $("#cli").val(c.prev.at(c.line)); break;
+			case 'Enter':
+				c.counter = 0;
+				if ((/[^\s\/]/).test($("#cli").val())){
+					if (c.prev.at(-1) != c.currentInput) c.prev.push($("#cli").val());
+					if ($('#cli').val()[0] == '/') game.chat(game.runCommand($("#cli").val().slice(1)))
+					else game.mp ? servers.get(servers.sel).socket.emit("chat", $("#cli").val()) : player.chat($("#cli").val())
+					$("#cli").val(''); c.line = 0;
+				}
+				break;
+		}
+	});
+	game.canvas.click(e => { game.isPaused ? null : game.canvas[0].requestPointerLock(); ui.update() });
+	game.canvas.keydown(e => {
+		switch(e.key){
+			case 'F3': $('#debug').toggle();
+			case 'F1': e.preventDefault(); $('#hud').toggle(); break;
+			case 'F4': e.preventDefault(); game.hitboxes = !game.hitboxes; break;
+			case 'Tab': e.preventDefault(); if(game.mp) $('#tablist').show(); break;
+		}
+	});
+	game.canvas.keyup(e => {
+		switch(e.key){
+			case 'Tab': e.preventDefault(); if(game.mp) $('#tablist').hide(); break;
+		}
+	});
+	game.canvas.on('wheel', e => {
+		if(!player.camIsActive && player.data().fleet.sel > -1){
+			player.data().fleet.sel = Math.clamp(player.data().fleet.sel + Math.clamp(e.originalEvent.wheelDelta, -1, 1), 0, player.data().fleet.length - 1);
+			Object.assign(player.cam, {
+				lowerRadiusLimit: Ship.generic[player.data().fleet[player.data().fleet.sel].type].camRadius,
+				upperRadiusLimit: Ship.generic[player.data().fleet[player.data().fleet.sel].type].camRadius
+			});
+		}
+	});
+	
+	$("#q").keydown(e => {
+		if (e.key == keybind.nav || e.key == 'Escape') {
+			game.changeUI('#q');
+		}
+	});
+	$("#e").keydown(e => {
+		if (e.key == keybind.inv || e.key == 'Escape') {
+			game.changeUI('#e');
+		}
+
+	}).click(ui.update);
+	$('canvas.game,#esc,#hud').keydown(e => {
+		if (e.key == 'Escape') {
+			game.changeUI('#esc', true);
+			game.isPaused = !game.isPaused;
+		}
+		ui.update();
+	});
+	$(document).on('pointerlockchange', e => {
+		game.scene().activeCamera[document.pointerLockElement == game.canvas[0] ? 'attachControl' : 'detachControl'](game.canvas[0], false);
+	});
+	$("button").click(e => { playsound(sound.ui, settings.sfx) })
+	$('#e>div,#q>div').not('.nav,.inv,.yrd,.item-bar').hide();
+
+	// the loop ~~loop
+	const loop = () => {
+		if (saves.get(saves.sel) instanceof Save && game.currentLevel instanceof Vector2){
+			if(!game.isPaused){
+				try {
+					game.frames++;
+					warp.cooltime = Math.max(0, warp.cooltime - (1 - player.data().tech.energy / 100));
+					warp.energy = Math.clamp(warp.energy + (1 + player.data().tech.energy / 20) * .06 * game.scene().getAnimationRatio(), 0, warp.maxEnergy);
+					item.multiplyer = 1 + (1 - game.difficulty);
+					Ship.multiplyer = {
+						damage: 1 + (1 - game.difficulty) + player.data().tech.laser * 0.1,
+						hp: 1 + (1 - game.difficulty) + player.data().tech.armor * 0.15
+					};
+					if(player.data().rotation.y > Math.PI) player.data().rotation.y -= 2 * Math.PI;
+					if(player.data().rotation.y < -Math.PI) player.data().rotation.y += 2 * Math.PI;
+					if(player.cam.alpha > Math.PI) player.cam.alpha -= 2 * Math.PI;
+					if(player.cam.alpha < -Math.PI) player.cam.alpha += 2 * Math.PI;
+					if(Math.abs(player.data().position.x) > 99999){
+						let newLevel = new Vector2(game.currentLevel.x + Math.clamp(player.data().position.x, -1, 1), game.currentLevel.y);
+						warp.start(newLevel);
+						player.data().position.x *= -1;
+					};
+					if(Math.abs(player.data().position.z) > 99999){
+						let newLevel = new Vector2(game.currentLevel.x, game.currentLevel.y + Math.clamp(player.data().position.z, -1, 1));
+						warp.start(newLevel);
+						player.data().position.z *= -1;
+					};
+					if(player.rcsIsActive) player.velocity = player.velocity.multiplyByFloats(0.9, 0.9, 0.9);
+					player.cam.angularSensibilityX = player.cam.angularSensibilityY = 2000 / settings.sensitivity;
+					player.updateFleet();
+					game.scene().meshes.forEach(m => {
+						if (m.name != 'skybox' && isHex(m.id)) m.showBoundingBox = game.hitboxes;
+					});
+					let closestBody = game.scene().closestBody = null;
+					for(let [id, body] of game.scene().bodies){
+						if (body instanceof CelestialBody){
+							closestBody = game.scene().closestBody = closestBody == null || Vector3.Distance(player.data().position, body.position) < Vector3.Distance(player.data().position, closestBody.position) ? body : closestBody;
+							let distance = Vector3.Distance(player.data().position, closestBody.position.add(closestBody.fleetLocation.position));
+							if(distance < 200 && !Ship.battle && closestBody.owner != player.id && closestBody == body){
+								Ship.battle = id;
+							}else if(distance > 200){
+								Ship.battle = null;
+							}
+						}
+					};
+					if(game.scene().bodies.get(Ship.battle) instanceof CelestialBody && game.scene().bodies.get(Ship.battle).owner != player.id){
+						if(game.scene().bodies.get(Ship.battle).fleet.length == 0){
+							game.scene().bodies.get(Ship.battle).owner = player.id;
+							Ship.battle = null;
+						}else{
+							player.data().fleet.forEach(ship => {
+								if((game.scene().getAnimationRatio() * ship.reload).toFixed(1) == Math.floor(game.scene().getAnimationRatio() * ship.reload)) {
+									let isCrit = !!(Math.random() < Ship.generic[ship.type].critChance);
+									let target = game.scene().bodies.get(Ship.battle).fleet[rand.int(0, game.scene().bodies.get(Ship.battle).fleet.length - 1)];
+									let laser = Mesh.CreateLines("laser." + rand.hex(16), [ship.mesh().getAbsolutePosition().add(Vector3.Up()).add(rand.cords(1)), target.mesh().getAbsolutePosition().add(Vector3.Up())], game.scene());
+									laser.color = new Color3(0, 1, 1);
+									target.hp -= ship.damage / 5 * isCrit ? Ship.generic[ship.type].critDamage : 1;
+									setTimeout(e => { laser.dispose() }, ship.reload * 100)
+								}
+							});
+							game.scene().bodies.get(Ship.battle).fleet.forEach((ship, i) => {
+								player.updateFleet();
+								if(player.data().fleet.length > 0){
+									if (ship.hp <= 0) {
+										player.giveItems(Ship.generic[ship.type].recipe[0]);
+										if(Math.floor(player.levelOf(player.data().xp  + Ship.generic[ship.type].xp)) > Math.floor(player.levelOf(player.data().xp))){
+											/*level up*/
+											player.data().xpPoints++;
+										}
+										player.data().xp += Ship.generic[ship.type].xp;
+										ship.remove();
+										game.scene().bodies.get(Ship.battle).fleet.splice(i, 1);
+									}
+									else if ((game.scene().getAnimationRatio() * ship.reload).toFixed(1) == Math.floor(game.scene().getAnimationRatio() * ship.reload)) {
+										let isCrit = !!(Math.random() < Ship.generic[ship.type].critChance);
+										let target = player.data().fleet[rand.int(0, player.data().fleet.length - 1)];
+										let laser = Mesh.CreateLines("laser." + rand.hex(16), [ship.mesh().getAbsolutePosition().add(Vector3.Up()).add(rand.cords(1)), target.mesh().getAbsolutePosition().add(Vector3.Up())], game.scene());
+										laser.color = new Color3(1, 0, 0);
+										target.hp -= ship.damage / 5 * isCrit ? Ship.generic[ship.type].critDamage : 1;
+										rand.int(0, 5) == 0 ? playsound(sound.laser_hit, settings.sfx) : 0;
+										setTimeout(e => { laser.dispose() }, ship.reload * 100)
+									}
+								}
+							});
+						}
+					}else{
+						player.data().fleet.forEach(ship => {
+							let healAmount = Ship.generic[ship.type].hp / (1000 - player.data().tech.regen * 10);
+							if(ship.hp + healAmount <= Ship.generic[ship.type].hp) ship.hp += healAmount;
+						});
+					}
+					player.updateFleet();
+					player.data().fleet.forEach((ship, i) => {
+						ship.position.addInPlace(new Vector3(ship.velocity.x * game.scene().getAnimationRatio(), ship.velocity.y * game.scene().getAnimationRatio(), ship.velocity.z * game.scene().getAnimationRatio()));
+						if(player.rcsIsActive) ship.velocity = ship.velocity.multiplyByFloats(0.9, 0.9, 0.9);
+						ship.mesh().computeWorldMatrix(true);
+						ship.mesh().position = ship.position;
+						ship.mesh().rotation = ship.rotation;
+					});
+					player.data().position.addInPlace(new Vector3(player.velocity.x * game.scene().getAnimationRatio(), player.velocity.y * game.scene().getAnimationRatio(), player.velocity.z * game.scene().getAnimationRatio()));
+					game.scene().waypoints.forEach(waypoint => {
+						let pos = waypoint.screenPos;
+						waypoint.marker
+						.css({position: 'fixed', left: Math.clamp(pos.x, 0, width - settings.font_size) + 'px', top: Math.clamp(pos.y, 0, height - settings.font_size) + 'px', fill: waypoint.color.toHexString()})
+						.filter('p').text(Vector2.Distance(pos, new Vector2(width / 2, height / 2)) < 60 ? `${waypoint.name} - ${minimize(Vector3.Distance(player.data().position, waypoint.position))} km` : '');
+						waypoint.marker[pos.z > 1 && pos.z < 1.15 ? 'hide' : 'show']();
+					});
+					$('#hud p.level').text(Math.floor(player.levelOf(player.data().xp)));
+					$('#hud svg.xp rect').attr('width', (player.levelOf(player.data().xp) % 1 * 100) + '%');
+					$("#debug .left").html(`
+						<span>${game.version} ${game.mods.length ? `[${game.mods.join(", ")}]` : `(vanilla)`}</span><br>
+						<span>FPS ${game.engine.getFps().toFixed()}</span><br>
+						<span>${saves.sel} (${saves.get(saves.sel).date.toLocaleString()}) L: ${Object.keys(saves.get(saves.sel).levels).length} S: ${Object.keys(saves.get(saves.sel).systems).length}</span><br><br>
+						<span>P: ${player.data().position.toFixed(1).display()} V: ${player.velocity.toFixed(1).display()} R: ${player.data().rotation.toFixed(2).display('xy')}</span><br>
+						<span>C: (${player.cam.alpha.toFixed(2)}, ${player.cam.beta.toFixed(2)}) r: ${player.cam.radius.toFixed(1)} m: ${player.camIsActive ? 'player' : 'ship'}</span><br><br>
+						<span>LVL ${game.currentLevel.display()} ${game.scene().name} B: ${game.scene().bodies.size}</span><br>
+						<span>${Ship.battle} ${Ship.battle ? game.scene().bodies.get(Ship.battle).fleet.length : 0}/${[...game.scene().bodies.values()].reduce((a, c) => a + c.fleet.length, 0)}</span><br>
+					`);
+					$("#debug .right").html(`
+						<span>Babylon v${Engine.Version} | jQuery v${$.fn.jquery}</span><br>
+						<span>${game.engine._glRenderer}</span><br>
+						<span>${performance.memory ? `${(performance.memory.usedJSHeapSize / 1000000) .toFixed()}MB/${(performance.memory.jsHeapSizeLimit / 1000000).toFixed()}MB (${(performance.memory.totalJSHeapSize / 1000000).toFixed()}MB Allocated)` : 'Memory usage unknown' }</span><br>
+						<span>${navigator.hardwareConcurrency} CPU Threads</span><br><br>
+						<span>${closestBody.name} ${closestBody.position.toFixed(1).display('xz')} ${Vector3.Distance(player.data().position, closestBody.position)?.toFixed(1)} | ${Vector3.Distance(player.data().position, closestBody.position.add(closestBody.fleetLocation.position)).toFixed(1)}</span><br>
+						<span>${player.targetBody ?? ''}</span><br><br>
+						<span>Selected ship: ${player.data().fleet[player.data().fleet.sel] ? `
+						<span>${player.data().fleet[player.data().fleet.sel].id} (${player.data().fleet[player.data().fleet.sel].type}) ${player.data().fleet.sel + 1}/${player.data().fleet.length}</span><br>
+						<span>P: ${player.data().fleet[player.data().fleet.sel].position.toFixed(1).display()} V: ${player.data().fleet[player.data().fleet.sel].velocity.toFixed(1).display()} R: ${player.data().fleet[player.data().fleet.sel].mesh().rotation.toFixed(2).display('xy')}</span><br>
+						<span>Lvl: ${player.data().fleet[player.data().fleet.sel].level}/${Ship.generic[player.data().fleet[player.data().fleet.sel].type].recipe.length - 1} Hp: ${player.data().fleet[player.data().fleet.sel].hp.toFixed(1)}/${Ship.generic[player.data().fleet[player.data().fleet.sel].type].hp.toFixed(1)}</span><br>
+						`: ' none'}
+					`);
+					
+					game.scene().render();
+				} catch (err) { console.error(`loop() failed: ${err.stack ?? err}`) }
+			}
+		}
+		settings = $('#settings form.gen').formData();
+		worldgen = $('#save form').formData();
+	};
+	ui.update()
+	$('#loading_cover').fadeOut(1000);
+	console.log('Game loadeding successful');
+	game.engine.runRenderLoop(loop);
+	</script>
+</html>
